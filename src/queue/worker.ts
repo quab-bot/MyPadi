@@ -7,6 +7,7 @@
 import type { TaskRepo } from '../db/repo.js';
 import type { Coordinator } from '../agent/coordinator.js';
 import type { TelegramClient } from '../telegram/client.js';
+import { formatReportForTelegram } from '../telegram/format.js';
 
 export interface WorkerHandle {
   stop(): void;
@@ -39,7 +40,7 @@ export function runWorker(opts: {
       }
       try {
         const report = await coordinator.runTask(task);
-        await client.sendMessage(task.userId, report);
+        await client.sendMessage(task.userId, formatReportForTelegram(report), 'HTML');
       } catch (e) {
         opts.onError?.(e);
         await repo.setTaskStatus(task.id, 'failed').catch(() => {});

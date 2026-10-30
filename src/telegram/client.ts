@@ -44,9 +44,18 @@ export class TelegramClient {
     });
   }
 
-  async sendMessage(chatId: string | number, text: string): Promise<void> {
+  async sendMessage(
+    chatId: string | number,
+    text: string,
+    parseMode?: 'HTML' | 'MarkdownV2',
+  ): Promise<void> {
     for (const chunk of splitForTelegram(text)) {
-      await this.call('sendMessage', { chat_id: chatId, text: chunk, disable_web_page_preview: true });
+      await this.call('sendMessage', {
+        chat_id: chatId,
+        text: chunk,
+        disable_web_page_preview: true,
+        ...(parseMode ? { parse_mode: parseMode } : {}),
+      });
     }
   }
 
