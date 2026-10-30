@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(loops:*)",
+      "Bash(loops)",
+      "Bash(npx loopshouse:*)",
+      "Bash(npx -y loopshouse:*)",
+      "Bash(npm i -g loopshouse:*)",
+      "Bash(npm install -g loopshouse:*)",
+      "Bash(git push:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git config:*)"
+    ]
+  }
+}

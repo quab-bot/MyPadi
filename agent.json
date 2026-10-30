@@ -1,0 +1,18 @@
+{
+  "name": "MyPadi",
+  "tagline": "A general-purpose AI assistant on Telegram that pays for real services as it works.",
+  "description": "MyPadi is a general-purpose AI assistant on Telegram. Describe a task in plain language and MyPadi plans the steps, pays for real external data and compute services over x402 on Celo (via buy), checks the results, and returns a sourced report. Users never touch a wallet; the project wallet sponsors usage under strict per-task, per-user and global budget caps.",
+  "repo": "https://github.com/quab-bot/MyPadi",
+  "track": "Build with buy",
+  "event": "agents-on-open-rails",
+  "attributionTag": "celo_c42607f62b5b",
+  "agentWallet": "0xe7C8e60a40436c3ab3875fbdB9b5a26D9518ECc3",
+  "erc8004": {
+    "registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+    "chain": "celo",
+    "agentId": "(set after registration)",
+    "agentURI": "http://localhost:3100/agent-registration.json"
+  },
+  "registrationFile": "http://localhost:3100/agent-registration.json",
+  "generated": "2026-10-30"
+}

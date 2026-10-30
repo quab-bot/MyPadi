@@ -1,0 +1,41 @@
+{
+  "name": "mypadi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MyPadi: a general-purpose AI assistant on Telegram that pays for real external services through buy (x402 on Celo).",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "migrate": "tsx src/db/migrate.ts",
+    "verify-tag": "tsx scripts/verify-tag.ts",
+    "preflight": "tsx scripts/preflight.ts",
+    "proof": "tsx scripts/proof.ts",
+    "gen-registration": "tsx scripts/gen-registration.ts",
+    "demo-sandbox": "tsx scripts/demo-sandbox.ts",
+    "wallet-new": "tsx scripts/wallet-new.ts",
+    "register-8004": "tsx scripts/register-8004.ts"
+  },
+  "dependencies": {
+    "@celo/attribution-tags": "^0.5.0",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.1",
+    "pg": "^8.13.1",
+    "viem": "^2.21.57",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

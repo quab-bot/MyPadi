@@ -1,0 +1,8 @@
+{
+  "_comment": "Copy to go-live.config.json on registration day and fill in. This is the ONLY place the developer fills live values. go-live.config.json is gitignored. Everything else reads from here via src/config/golive.ts. Leave a value as the empty string until it exists; preflight reports unfilled ones.",
+  "agentWallet": "",
+  "publicBaseUrl": "https://mypadi.example.com",
+  "agentId": "",
+  "firstTaggedTxHash": "",
+  "loopsProjectUrl": ""
+}
