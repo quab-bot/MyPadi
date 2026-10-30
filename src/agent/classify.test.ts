@@ -28,7 +28,18 @@ describe('classifyWorkflow', () => {
     expect(classifyWorkflow('what is the current gas price').workflow).toBe('onchain');
   });
 
-  it('does not misroute everyday use of the word research', () => {
-    expect(classifyWorkflow('research competitors for my startup').workflow).toBe('intel');
+  it('routes competitor / jobs / linkedin prompts to competitor', () => {
+    expect(classifyWorkflow('research my competitor Acme on LinkedIn').workflow).toBe('competitor');
+    expect(classifyWorkflow('who is hiring data scientists in Berlin').workflow).toBe('competitor');
+    expect(classifyWorkflow('find job openings for frontend engineers').workflow).toBe('competitor');
+  });
+
+  it('classifies the word "competitors" as competitor research (LinkedIn workflow)', () => {
+    expect(classifyWorkflow('research competitors for my startup').workflow).toBe('competitor');
+  });
+
+  it('on-chain still wins when both signals appear', () => {
+    const c = classifyWorkflow('is 0xe7C8e60a40436c3ab3875fbdB9b5a26D9518ECc3 hiring on linkedin?');
+    expect(c.workflow).toBe('onchain');
   });
 });

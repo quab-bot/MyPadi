@@ -7,7 +7,7 @@
  * paid path. The coordinator validates and budgets every step regardless of this choice.
  */
 
-export type Workflow = 'intel' | 'onchain';
+export type Workflow = 'intel' | 'onchain' | 'competitor';
 
 /** 0x + exactly 40 hex, not part of a longer hex run (an EVM address). */
 const ADDRESS_RE = /\b0x[0-9a-fA-F]{40}(?![0-9a-fA-F])/;
@@ -37,6 +37,24 @@ const ONCHAIN_PHRASES = [
   'erc20',
 ];
 
+/** Phrases that mean the user wants LinkedIn competitor/jobs research (Workflow B). */
+const COMPETITOR_PHRASES = [
+  'linkedin',
+  'competitor',
+  'competitors',
+  'competitive',
+  'hiring',
+  'who is hiring',
+  'job opening',
+  'job openings',
+  'jobs at',
+  'vacancy',
+  'vacancies',
+  'recruiting',
+  'company posts',
+  'employees at',
+];
+
 export interface Classification {
   workflow: Workflow;
   /** EVM addresses found in the prompt (deduped, lowercased). */
@@ -57,11 +75,12 @@ export function classifyWorkflow(prompt: string): Classification {
   );
 
   const hasConcrete = ADDRESS_RE.test(prompt) || TX_HASH_RE.test(prompt);
-  const hasPhrase = ONCHAIN_PHRASES.some((k) => p.includes(k));
+  const onchain = hasConcrete || ONCHAIN_PHRASES.some((k) => p.includes(k));
+  const competitor = COMPETITOR_PHRASES.some((k) => p.includes(k));
 
-  return {
-    workflow: hasConcrete || hasPhrase ? 'onchain' : 'intel',
-    addresses,
-    hashes,
-  };
+  // On-chain wins over competitor (a concrete address/hash is the strongest signal); both
+  // win over the default intel report.
+  const workflow: Workflow = onchain ? 'onchain' : competitor ? 'competitor' : 'intel';
+
+  return { workflow, addresses, hashes };
 }

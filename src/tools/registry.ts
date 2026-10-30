@@ -140,6 +140,92 @@ const youtubeTranscript: ToolSpec = {
   buildBody: (i) => i,
 };
 
+// --- Workflow B: competitor / jobs research on LinkedIn (all have sandbox offers) ---
+// Prices and sandbox availability verified live against the catalogue + 402 quotes 2026-10-30.
+
+const linkedinCompanyPosts: ToolSpec = {
+  id: 'linkedin.company.posts',
+  title: 'LinkedIn company posts',
+  method: 'POST',
+  network: 'both',
+  free: false,
+  note: '$0.023 per call',
+  schema: z
+    .object({
+      company: z.string().min(1).max(512), // LinkedIn company universal name, e.g. "microsoft"
+      postedWithin: z.string().min(1).max(64).optional(), // e.g. "1 month"
+    })
+    .strict(),
+  url: () => `${GATEWAY_BASE}/v1/social/linkedin/company/posts`,
+  buildBody: (i) => i,
+};
+
+const linkedinProfilePosts: ToolSpec = {
+  id: 'linkedin.profile.posts',
+  title: 'LinkedIn profile posts',
+  method: 'POST',
+  network: 'both',
+  free: false,
+  note: '$0.023 per call',
+  schema: z
+    .object({
+      profile: z.string().min(1).max(512), // profile URL, slug, or @handle
+      limit: z.number().int().min(1).max(20).optional(),
+    })
+    .strict(),
+  url: () => `${GATEWAY_BASE}/v1/social/linkedin/profile/posts`,
+  buildBody: (i) => i,
+};
+
+// maxResults is pinned to 1: the only bundle size verified by a live sandbox quote
+// (job-search $0.007, post-search $0.0215). Larger bundles need a fresh quote before use.
+const linkedinJobSearch: ToolSpec = {
+  id: 'monid.linkedin.apify.harvestapi-linkedin-job-search',
+  title: 'LinkedIn job search',
+  method: 'POST',
+  network: 'both',
+  free: false,
+  note: 'result bundle (maxResults pinned to 1): ~$0.007 sandbox',
+  schema: z
+    .object({
+      body: z
+        .object({
+          jobTitles: z.array(z.string().min(1).max(256)).min(1).max(10),
+          locations: z.array(z.string().min(1).max(128)).max(10).optional(),
+        })
+        .strict(),
+      maxResults: z.literal(1),
+    })
+    .strict(),
+  url: () => `${GATEWAY_BASE}/v1/social/linkedin/tools/apify-harvestapi-linkedin-job-search`,
+  buildBody: (i) => i,
+};
+
+const linkedinPostSearch: ToolSpec = {
+  id: 'monid.linkedin.apify.harvestapi-linkedin-post-search',
+  title: 'LinkedIn post search',
+  method: 'POST',
+  network: 'both',
+  free: false,
+  note: 'result bundle (maxResults pinned to 1): ~$0.0215 sandbox',
+  schema: z
+    .object({
+      body: z
+        .object({
+          searchQueries: z.array(z.string().min(1).max(512)).min(1).max(10),
+          postedLimit: z
+            .enum(['any', '1h', '24h', 'week', 'month', '3months', '6months', 'year'])
+            .optional(),
+          sortBy: z.enum(['relevance', 'date']).optional(),
+        })
+        .strict(),
+      maxResults: z.literal(1),
+    })
+    .strict(),
+  url: () => `${GATEWAY_BASE}/v1/social/linkedin/tools/apify-harvestapi-linkedin-post-search`,
+  buildBody: (i) => i,
+};
+
 // --- Workflow C: free SQD reads + paid Chainstack batch (mainnet only) ---
 
 const sqdDatasets: ToolSpec = {
@@ -222,6 +308,10 @@ export const TOOLS: ToolSpec[] = [
   redditSearch,
   youtubeSearch,
   youtubeTranscript,
+  linkedinCompanyPosts,
+  linkedinProfilePosts,
+  linkedinJobSearch,
+  linkedinPostSearch,
   sqdDatasets,
   sqdHead,
   sqdFinalizedHead,

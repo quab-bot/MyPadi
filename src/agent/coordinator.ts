@@ -72,7 +72,11 @@ export class Coordinator {
     await repo.setTaskStatus(task.id, 'running');
     try {
       const evidence =
-        kind === 'onchain' ? await this.gatherOnchain(task) : await this.gatherIntel(task);
+        kind === 'onchain'
+          ? await this.gatherOnchain(task)
+          : kind === 'competitor'
+            ? await this.gatherCompetitor(task)
+            : await this.gatherIntel(task);
       const report = await synthesizer.run({ prompt: task.prompt, evidence });
       await repo.saveOutput(
         task.id,
@@ -117,6 +121,19 @@ export class Coordinator {
           evidence.push(...out.evidence);
         }
       }
+    }
+    return evidence;
+  }
+
+  /** Workflow B: competitor / jobs research. Same engine as intel, LinkedIn tools allowlisted. */
+  private async gatherCompetitor(task: TaskRow): Promise<Evidence[]> {
+    const { planner } = this.deps;
+    const evidence: Evidence[] = [];
+    let idx = 0;
+    const plan = await planner.planCompetitor(task.prompt, this.opts.sandbox);
+    for (const step of plan.steps) {
+      const out = await this.executeStep(task, step, idx++);
+      evidence.push(...out.evidence);
     }
     return evidence;
   }

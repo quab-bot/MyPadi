@@ -62,6 +62,20 @@ async function main(): Promise<void> {
   const demoUserId = DEMO_USER_ID;
   await repo.upsertUser(demoUserId, 'sandbox_demo');
   const taskId = await repo.createTask(demoUserId, prompt);
+
+  // Atomically claim the task so a running app worker cannot also pick it up and race us
+  // (that collides on the steps unique key). If the claim returns nothing, a worker already
+  // took it: stop the app before running this harness.
+  const claimed = await getPool().query(
+    `UPDATE tasks SET status='running', updated_at=now() WHERE id=$1 AND status='queued' RETURNING id`,
+    [taskId],
+  );
+  if (claimed.rowCount === 0) {
+    console.error('Task was claimed by a running worker. Stop the app (npm run start) before demo-sandbox.');
+    await closePool();
+    process.exit(1);
+  }
+
   const task = await repo.getTask(taskId);
   if (!task) throw new Error('task not found after create');
 

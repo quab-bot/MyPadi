@@ -38,6 +38,20 @@ Rules:
 - One step per chosen video, maxResults always 1.
 - Only use URLs from the provided candidates. Choose at most the requested number.`;
 
+const COMPETITOR_SYSTEM = `You are MyPadi's planner for competitor and jobs research on LinkedIn.
+Propose steps using ONLY these tools:
+
+- "linkedin.company.posts": input { "company": "<universal name, e.g. microsoft>", "postedWithin"?: "1 month" }
+- "linkedin.profile.posts": input { "profile": "<url, slug, or @handle>", "limit"?: <1-20> }
+- "monid.linkedin.apify.harvestapi-linkedin-job-search": input { "body": { "jobTitles": ["<title>"], "locations"?: ["<place>"] }, "maxResults": 1 }
+- "monid.linkedin.apify.harvestapi-linkedin-post-search": input { "body": { "searchQueries": ["<query>"], "sortBy"?: "date" }, "maxResults": 1 }
+
+Rules:
+- Return STRICT JSON: {"steps":[{"tool":"<id>","input":{...}}]}.
+- maxResults MUST be 1 on the two apify tools (cost control).
+- Pick the few most relevant steps for the request (usually 2 to 3). For a named company use its
+  LinkedIn universal name (lowercase, no spaces). Use ONLY the fields listed; do not invent any.`;
+
 const ONCHAIN_SYSTEM = `You are MyPadi's planner for Celo on-chain investigation. Propose read-only
 steps using ONLY these tools:
 
@@ -103,6 +117,18 @@ export class Planner {
           role: 'user',
           content: `User request: ${prompt}\n\nCandidate videos (choose at most ${maxVideos}):\n${list}`,
         },
+      ],
+      { json: true, temperature: 0.2 },
+    );
+    return this.validateAll(content, sandbox);
+  }
+
+  /** Workflow B: competitor / jobs research using the allowlisted LinkedIn tools. */
+  async planCompetitor(prompt: string, sandbox = true): Promise<PlanResult> {
+    const content = await this.llm.complete(
+      [
+        { role: 'system', content: COMPETITOR_SYSTEM },
+        { role: 'user', content: prompt },
       ],
       { json: true, temperature: 0.2 },
     );

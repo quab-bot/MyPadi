@@ -37,6 +37,9 @@ Real paid x402 calls from the MyPadi wallet into services we do not control:
   turns the top videos into quotable text. These four compose Workflow A, the multi-source intel report.
 - **chainstack.celo** (`/chainstack/celo`, $0.01/batch) — authoritative Celo JSON-RPC batch reads for
   Workflow C (on-chain investigation), alongside the free SQD portal for cheap lookups.
+- **LinkedIn** (`linkedin.company.posts` / `linkedin.profile.posts` $0.023, apify `job-search` /
+  `post-search` bundles) — Workflow B competitor and jobs research: a company's recent posts plus
+  who they are hiring, synthesised into one brief.
 
 Depth, not spam: each report chains several different providers, each call is quoted first and paid
 only within budget, and every paid call is stored with its settlement tx hash as evidence. We do not

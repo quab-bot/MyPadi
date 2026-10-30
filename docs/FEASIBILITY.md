@@ -74,6 +74,27 @@ There is **no sandbox path** for the paid Chainstack batch. Consequences for Pha
 
 ---
 
+## 2B. Workflow B - competitor / jobs research on LinkedIn (STRETCH, now built)
+
+Same engine as Workflow A, with LinkedIn tools allowlisted. The classifier routes a prompt to
+Workflow B on LinkedIn / competitor / hiring / jobs vocabulary. All picks have sandbox offers
+(verified live against the catalogue + 402 quotes, 2026-10-30).
+
+| Tool (id) | Route | Input | Price (verified) | Sandbox? |
+|---|---|---|---|---|
+| `linkedin.company.posts` | `POST /v1/social/linkedin/company/posts` | `{ company, postedWithin? }` | **$0.023 / call** | Yes |
+| `linkedin.profile.posts` | `POST /v1/social/linkedin/profile/posts` | `{ profile, limit?(1-20) }` | **$0.023 / call** | Yes |
+| `monid.linkedin.apify.harvestapi-linkedin-job-search` | `POST /v1/social/linkedin/tools/apify-harvestapi-linkedin-job-search` | `{ body:{ jobTitles[], locations? }, maxResults:1 }` | **$0.007** (sandbox 402, maxResults 1) | Yes |
+| `monid.linkedin.apify.harvestapi-linkedin-post-search` | `POST /v1/social/linkedin/tools/apify-harvestapi-linkedin-post-search` | `{ body:{ searchQueries[], postedLimit?, sortBy? }, maxResults:1 }` | **$0.0215** (sandbox 402, maxResults 1) | Yes |
+
+Notes:
+- The two apify tools use result-bundle pricing. Only `maxResults: 1` is pinned in the registry
+  (the one bundle size confirmed by a live 402 quote). Larger bundles need a fresh quote first.
+- There are 26 LinkedIn capabilities total; the other 22 (contactout email enrichment $0.5-0.7,
+  tikhub per-call $0.019-0.103, clay enrichment $0.067, etc.) are available to allowlist later.
+- Verified live end to end in sandbox: a "research Vercel on LinkedIn" task made 2 paid celo-sepolia
+  calls (company.posts + job-search) with settlement tx hashes and returned a sourced report.
+
 ## 3. Paid LLM fallback (optional)
 
 | Tool | Route | Price | Notes |
