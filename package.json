@@ -20,6 +20,7 @@
     "proof": "tsx scripts/proof.ts",
     "gen-registration": "tsx scripts/gen-registration.ts",
     "demo-sandbox": "tsx scripts/demo-sandbox.ts",
+    "db-reset-demo": "tsx scripts/db-reset-demo.ts",
     "wallet-new": "tsx scripts/wallet-new.ts",
     "register-8004": "tsx scripts/register-8004.ts"
   },

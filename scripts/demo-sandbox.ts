@@ -27,6 +27,9 @@ import { usdFromMicro } from '../src/budget/money.js';
 
 const DEFAULT_PROMPT = 'What are people saying about the Celo blockchain and its move to an Ethereum L2 this week? Give me a short sourced summary.';
 
+// A fake Telegram user id for sandbox runs. scripts/db-reset-demo.ts clears exactly this id.
+const DEMO_USER_ID = '999000001';
+
 async function main(): Promise<void> {
   if (!sandbox) {
     console.error('demo-sandbox refuses to run with BUY_MODE != sandbox. This is a Phase 1 sandbox-only harness.');
@@ -56,7 +59,7 @@ async function main(): Promise<void> {
   );
 
   // A fake Telegram user id so the FK and per-user budget work exactly as in production.
-  const demoUserId = '999000001';
+  const demoUserId = DEMO_USER_ID;
   await repo.upsertUser(demoUserId, 'sandbox_demo');
   const taskId = await repo.createTask(demoUserId, prompt);
   const task = await repo.getTask(taskId);

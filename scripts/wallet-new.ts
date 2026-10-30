@@ -75,25 +75,38 @@ async function main(): Promise<void> {
   envText = setEnvLine(envText, 'AGENT_WALLET', account.address);
   await writeFile(ENV_PATH, envText, 'utf8');
 
+  // buy's file keystore refuses to sign on Windows (it demands a POSIX 0600 key file, which
+  // Windows cannot represent), so local Windows uses the OS keychain and only the Linux VPS
+  // uses the file backend. See .env.example and memory buy-keystore-windows.
+  const isWindows = process.platform === 'win32';
+  const keystoreEnv: Record<string, string> = isWindows
+    ? {} // default = OS keychain (Windows Credential Manager)
+    : { BUY_KEYSTORE_BACKEND: 'file', BUY_HOME: process.env.BUY_HOME ?? './buy-home' };
+
   console.log('New MyPadi wallet generated.');
   console.log(`  address: ${account.address}`);
   console.log('  key:     written to .env (AGENT_PRIVATE_KEY), not shown here');
   console.log('');
-  console.log('To import into the buy FILE keystore yourself (key read from BUY_IMPORT_KEY env, never an arg):');
-  console.log('  PowerShell:');
-  console.log('    $env:BUY_KEYSTORE_BACKEND="file"; $env:BUY_HOME="./buy-home"');
-  console.log('    $env:BUY_IMPORT_KEY="<AGENT_PRIVATE_KEY from .env>"');
-  console.log('    buy --sandbox setup --import --name mypadi --network sepolia   # sandbox (Phase 1)');
-  console.log('    buy --sandbox account cap mypadi 1.00');
+  console.log(`To import it into the buy keystore yourself (key read from BUY_IMPORT_KEY env, never an arg):`);
+  if (isWindows) {
+    console.log('  PowerShell (Windows -> OS keychain, the file backend cannot sign here):');
+    console.log('    $env:BUY_IMPORT_KEY="<AGENT_PRIVATE_KEY from .env>"');
+    console.log('    buy --sandbox setup --import --name mypadi --network sepolia   # sandbox (Phase 1)');
+    console.log('    buy --sandbox account cap mypadi 1.00');
+  } else {
+    console.log('  Linux/macOS (file backend):');
+    console.log('    export BUY_KEYSTORE_BACKEND=file BUY_HOME=./buy-home');
+    console.log('    export BUY_IMPORT_KEY="<AGENT_PRIVATE_KEY from .env>"');
+    console.log('    buy --sandbox setup --import --name mypadi --network sepolia   # sandbox (Phase 1)');
+    console.log('    buy --sandbox account cap mypadi 1.00');
+  }
   console.log('  (Phase 2 mainnet uses --network mainnet, without --sandbox.)');
 
   if (importSandbox) {
-    console.log('\n--import-sandbox: importing into the sandbox file keystore...');
-    const env = {
-      BUY_KEYSTORE_BACKEND: 'file',
-      BUY_HOME: process.env.BUY_HOME ?? './buy-home',
-      BUY_IMPORT_KEY: key,
-    };
+    console.log(
+      `\n--import-sandbox: importing into the sandbox ${isWindows ? 'OS keychain' : 'file keystore'}...`,
+    );
+    const env = { ...keystoreEnv, BUY_IMPORT_KEY: key };
     const setupCode = await spawnBuy(
       ['--sandbox', 'setup', '--import', '--name', 'mypadi', '--network', 'sepolia', '--force'],
       env,
