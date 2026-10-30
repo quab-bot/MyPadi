@@ -68,6 +68,55 @@ export function extractEvidence(source: string, body: string, limit = 10): Evide
   return out;
 }
 
+// --- Workflow C: on-chain evidence (SQD + Chainstack JSON-RPC) --------------
+
+const DATASET_KEYS = ['dataset', 'name', 'id', 'slug', 'alias'];
+
+/** Dataset identifiers from an SQD /datasets response (array of strings or objects). */
+export function extractDatasetNames(body: string, limit = 50): string[] {
+  const root = parseBody(body);
+  if (root === undefined) return [];
+  const out = new Set<string>();
+  const add = (s: unknown) => {
+    if (typeof s === 'string' && s.trim() && s.length <= 128) out.add(s.trim());
+  };
+  const walk = (node: unknown) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      for (const el of node) {
+        if (typeof el === 'string') add(el);
+        else walk(el);
+      }
+      return;
+    }
+    const obj = node as Record<string, unknown>;
+    for (const k of DATASET_KEYS) add(obj[k]);
+    for (const v of Object.values(obj)) if (typeof v === 'object') walk(v);
+  };
+  walk(root);
+  return Array.from(out).slice(0, limit);
+}
+
+/**
+ * Evidence from an on-chain read. The raw JSON IS the evidence here, so we keep a compact,
+ * truncated rendering rather than hunting for prose. Never throws on an odd shape.
+ */
+export function extractChainEvidence(source: string, body: string, maxChars = 800): Evidence[] {
+  const root = parseBody(body);
+  if (root === undefined) {
+    const text = body.trim();
+    return text ? [{ source, excerpt: text.slice(0, maxChars) }] : [];
+  }
+  let rendered: string;
+  try {
+    rendered = JSON.stringify(root);
+  } catch {
+    rendered = String(root);
+  }
+  if (rendered.length > maxChars) rendered = rendered.slice(0, maxChars) + '…';
+  return [{ source, excerpt: rendered }];
+}
+
 export interface VideoCandidate {
   title: string;
   url: string;

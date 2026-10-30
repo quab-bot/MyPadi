@@ -15,7 +15,13 @@ import { validateStep, type PlannerStep } from '../tools/validator.js';
 import type { TaskRepo, TaskRow, ServiceCallStatus } from '../db/repo.js';
 import type { Planner } from './planner.js';
 import type { Synthesizer, Evidence } from './synthesize.js';
-import { extractEvidence, extractYoutubeCandidates } from './extract.js';
+import {
+  extractEvidence,
+  extractYoutubeCandidates,
+  extractChainEvidence,
+  extractDatasetNames,
+} from './extract.js';
+import { classifyWorkflow } from './classify.js';
 
 export interface CoordinatorDeps {
   repo: TaskRepo;
@@ -37,6 +43,11 @@ const SOURCE_LABEL: Record<string, string> = {
   'reddit.posts.search': 'Reddit',
   'youtube.videos.search': 'YouTube',
   'monid.youtube.apify.starvibe-youtube-video-transcript': 'YouTube transcript',
+  'sqd.datasets': 'SQD datasets',
+  'sqd.head': 'SQD chain head',
+  'sqd.finalized-head': 'SQD finalized head',
+  'sqd.block-at-timestamp': 'SQD block lookup',
+  'chainstack.celo': 'Celo RPC',
 };
 
 function labelFor(toolId: string): string {
@@ -54,35 +65,14 @@ export class Coordinator {
     private readonly opts: CoordinatorOptions,
   ) {}
 
+  /** Route the task to the right workflow, then save the report. */
   async runTask(task: TaskRow): Promise<string> {
-    const { repo, planner, synthesizer } = this.deps;
+    const { repo, synthesizer } = this.deps;
+    const kind = classifyWorkflow(task.prompt).workflow;
     await repo.setTaskStatus(task.id, 'running');
-
-    const evidence: Evidence[] = [];
-    let idx = 0;
-    let youtubeBody: string | undefined;
-
     try {
-      // Pass 1: searches.
-      const plan = await planner.plan(task.prompt);
-      for (const step of plan.steps) {
-        const out = await this.executeStep(task, step, idx++);
-        evidence.push(...out.evidence);
-        if (step.tool === 'youtube.videos.search' && out.body) youtubeBody = out.body;
-      }
-
-      // Pass 2: transcribe the most relevant videos, budget permitting.
-      if (youtubeBody && this.opts.maxVideos > 0) {
-        const candidates = extractYoutubeCandidates(youtubeBody);
-        if (candidates.length) {
-          const tplan = await planner.planTranscripts(task.prompt, candidates, this.opts.maxVideos);
-          for (const step of tplan.steps) {
-            const out = await this.executeStep(task, step, idx++);
-            evidence.push(...out.evidence);
-          }
-        }
-      }
-
+      const evidence =
+        kind === 'onchain' ? await this.gatherOnchain(task) : await this.gatherIntel(task);
       const report = await synthesizer.run({ prompt: task.prompt, evidence });
       await repo.saveOutput(
         task.id,
@@ -97,8 +87,74 @@ export class Coordinator {
     }
   }
 
+  /** Workflow A: multi-source intel report (X + Reddit + YouTube search + transcripts). */
+  private async gatherIntel(task: TaskRow): Promise<Evidence[]> {
+    const { planner } = this.deps;
+    const evidence: Evidence[] = [];
+    let idx = 0;
+    let youtubeBody: string | undefined;
+
+    // Pass 1: searches.
+    const plan = await planner.plan(task.prompt, this.opts.sandbox);
+    for (const step of plan.steps) {
+      const out = await this.executeStep(task, step, idx++);
+      evidence.push(...out.evidence);
+      if (step.tool === 'youtube.videos.search' && out.body) youtubeBody = out.body;
+    }
+
+    // Pass 2: transcribe the most relevant videos, budget permitting.
+    if (youtubeBody && this.opts.maxVideos > 0) {
+      const candidates = extractYoutubeCandidates(youtubeBody);
+      if (candidates.length) {
+        const tplan = await planner.planTranscripts(
+          task.prompt,
+          candidates,
+          this.opts.maxVideos,
+          this.opts.sandbox,
+        );
+        for (const step of tplan.steps) {
+          const out = await this.executeStep(task, step, idx++);
+          evidence.push(...out.evidence);
+        }
+      }
+    }
+    return evidence;
+  }
+
+  /**
+   * Workflow C: Celo on-chain investigation. Discover datasets via free SQD, let the planner
+   * propose SQD reads and (mainnet) a Chainstack batch, run them, and collect the raw on-chain
+   * results as evidence. In sandbox only the free SQD reads run; Chainstack is Phase 2.
+   */
+  private async gatherOnchain(task: TaskRow): Promise<Evidence[]> {
+    const { planner } = this.deps;
+    const chainExtractor = (label: string, body: string): Evidence[] =>
+      extractChainEvidence(label, body);
+    const evidence: Evidence[] = [];
+    let idx = 0;
+
+    // 1. Discover available datasets (free, no input).
+    const ds = await this.executeStep(task, { tool: 'sqd.datasets', input: {} }, idx++, chainExtractor);
+    evidence.push(...ds.evidence);
+    const datasets = ds.body ? extractDatasetNames(ds.body) : [];
+
+    // 2. Plan and run the on-chain reads.
+    const plan = await planner.planOnchain(task.prompt, datasets, this.opts.sandbox);
+    for (const step of plan.steps) {
+      const out = await this.executeStep(task, step, idx++, chainExtractor);
+      evidence.push(...out.evidence);
+    }
+    return evidence;
+  }
+
   /** Execute one planner step, handling free vs paid and all pay outcomes. */
-  private async executeStep(task: TaskRow, step: PlannerStep, idx: number): Promise<StepOutcome> {
+  private async executeStep(
+    task: TaskRow,
+    step: PlannerStep,
+    idx: number,
+    extractor: (label: string, body: string) => Evidence[] = (label, body) =>
+      extractEvidence(label, body),
+  ): Promise<StepOutcome> {
     const { repo, ledger, adapter } = this.deps;
     const stepId = await repo.saveStep(task.id, idx, step.tool, step.input, 'validated');
 
@@ -120,7 +176,7 @@ export class Coordinator {
           status: 'free', excerpt: body.slice(0, 500),
         });
         await repo.setStepStatus(stepId, 'done');
-        return { body, evidence: extractEvidence(label, body) };
+        return { body, evidence: extractor(label, body) };
       } catch (e) {
         await repo.setStepStatus(stepId, 'failed', String(e));
         return { evidence: [] };
@@ -162,7 +218,7 @@ export class Coordinator {
         excerpt: pay.body.slice(0, 500),
       });
       await repo.setStepStatus(stepId, 'done');
-      return { body: pay.body, evidence: extractEvidence(label, pay.body) };
+      return { body: pay.body, evidence: extractor(label, pay.body) };
     }
 
     if (pay.status === 'pre_settlement') {

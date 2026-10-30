@@ -38,6 +38,24 @@ Rules:
 - One step per chosen video, maxResults always 1.
 - Only use URLs from the provided candidates. Choose at most the requested number.`;
 
+const ONCHAIN_SYSTEM = `You are MyPadi's planner for Celo on-chain investigation. Propose read-only
+steps using ONLY these tools:
+
+- "sqd.head": input { "dataset": string }                       latest block of a dataset
+- "sqd.finalized-head": input { "dataset": string }             latest finalized block
+- "sqd.block-at-timestamp": input { "dataset": string, "timestamp": <unix seconds> }
+- "chainstack.celo": input { "calls": [ { "jsonrpc":"2.0", "id":1, "method":"<read method>", "params":[...] } ] }
+  Allowed methods ONLY: eth_blockNumber, eth_chainId, eth_gasPrice, eth_getBalance, eth_getCode,
+  eth_getTransactionCount, eth_getBlockByNumber, eth_getBlockByHash, eth_getTransactionByHash,
+  eth_getTransactionReceipt, eth_getLogs, eth_call.
+
+Rules:
+- Return STRICT JSON: {"steps":[{"tool":"<id>","input":{...}}]}.
+- Use ONLY dataset names from the provided list. If none clearly match Celo, omit SQD steps.
+- For a 0x address use eth_getBalance / eth_getTransactionCount (params like ["0x...","latest"]).
+  For a 0x tx hash use eth_getTransactionByHash or eth_getTransactionReceipt (params ["0x..."]).
+- Keep it to a few focused calls. Do not invent tools, methods, or fields.`;
+
 function extractJson(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const raw = (fenced?.[1] ?? text).trim();
@@ -56,7 +74,7 @@ function parseSteps(raw: unknown): PlannerStep[] {
 export class Planner {
   constructor(private readonly llm: Llm) {}
 
-  async plan(prompt: string): Promise<PlanResult> {
+  async plan(prompt: string, sandbox = true): Promise<PlanResult> {
     const content = await this.llm.complete(
       [
         { role: 'system', content: SEARCH_SYSTEM },
@@ -64,13 +82,14 @@ export class Planner {
       ],
       { json: true, temperature: 0.2 },
     );
-    return this.validateAll(content);
+    return this.validateAll(content, sandbox);
   }
 
   async planTranscripts(
     prompt: string,
     candidates: Array<{ title: string; url: string }>,
     maxVideos: number,
+    sandbox = true,
   ): Promise<PlanResult> {
     if (candidates.length === 0 || maxVideos <= 0) return { steps: [], warnings: [] };
     const list = candidates
@@ -87,11 +106,28 @@ export class Planner {
       ],
       { json: true, temperature: 0.2 },
     );
-    return this.validateAll(content);
+    return this.validateAll(content, sandbox);
   }
 
-  /** Parse the LLM output and keep only steps that pass the validator (sandbox mode). */
-  private validateAll(content: string): PlanResult {
+  /**
+   * Workflow C: on-chain investigation. `datasets` are the SQD dataset ids discovered by a free
+   * sqd.datasets call so the LLM only references ones that exist. In sandbox the validator drops
+   * the paid mainnet-only Chainstack steps (they run in Phase 2); SQD reads are free and run now.
+   */
+  async planOnchain(prompt: string, datasets: string[], sandbox = true): Promise<PlanResult> {
+    const dsList = datasets.length ? datasets.slice(0, 40).join(', ') : '(none discovered)';
+    const content = await this.llm.complete(
+      [
+        { role: 'system', content: ONCHAIN_SYSTEM },
+        { role: 'user', content: `User request: ${prompt}\n\nAvailable SQD datasets: ${dsList}` },
+      ],
+      { json: true, temperature: 0.2 },
+    );
+    return this.validateAll(content, sandbox);
+  }
+
+  /** Parse the LLM output and keep only steps that pass the validator for the active mode. */
+  private validateAll(content: string, sandbox: boolean): PlanResult {
     const warnings: string[] = [];
     let parsed: unknown;
     try {
@@ -102,7 +138,7 @@ export class Planner {
     const proposed = parseSteps(parsed);
     const steps: PlannerStep[] = [];
     for (const step of proposed) {
-      const v = validateStep(step, { sandbox: true });
+      const v = validateStep(step, { sandbox });
       if (v.ok) steps.push({ tool: step.tool, input: v.input });
       else warnings.push(`dropped step ${step.tool}: ${v.errors.join('; ')}`);
     }
