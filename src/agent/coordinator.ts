@@ -19,6 +19,7 @@ import {
   extractEvidence,
   extractYoutubeCandidates,
   extractChainEvidence,
+  decodeChainBatch,
   extractDatasetNames,
 } from './extract.js';
 import { classifyWorkflow } from './classify.js';
@@ -43,6 +44,8 @@ const SOURCE_LABEL: Record<string, string> = {
   'reddit.posts.search': 'Reddit',
   'youtube.videos.search': 'YouTube',
   'monid.youtube.apify.starvibe-youtube-video-transcript': 'YouTube transcript',
+  'monid.instagram.apify.apify-instagram-search-scraper': 'Instagram',
+  'monid.tiktok.apify.apidojo-tiktok-scraper': 'TikTok',
   'sqd.datasets': 'SQD datasets',
   'sqd.head': 'SQD chain head',
   'sqd.finalized-head': 'SQD finalized head',
@@ -155,10 +158,16 @@ export class Coordinator {
     evidence.push(...ds.evidence);
     const datasets = ds.body ? extractDatasetNames(ds.body) : [];
 
-    // 2. Plan and run the on-chain reads.
+    // 2. Plan and run the on-chain reads. Chainstack batches are decoded with their request
+    //    methods so values are labeled correctly (a balance is never rendered as a block number).
     const plan = await planner.planOnchain(task.prompt, datasets, this.opts.sandbox);
     for (const step of plan.steps) {
-      const out = await this.executeStep(task, step, idx++, chainExtractor);
+      const ext =
+        step.tool === 'chainstack.celo'
+          ? (label: string, body: string): Evidence[] =>
+              decodeChainBatch(((step.input as { calls?: unknown }).calls as never) ?? [], body, label)
+          : chainExtractor;
+      const out = await this.executeStep(task, step, idx++, ext);
       evidence.push(...out.evidence);
     }
     return evidence;

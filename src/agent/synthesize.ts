@@ -24,11 +24,13 @@ Formatting (Telegram, follow strictly):
 - Put short section headers on their own line wrapped in **double asterisks** for bold.
 - Use "- " for bullet points, one short point per line.
 - Cite sources inline like [1], [2].
-- Finish with a line **Sources** then one source per line as: [n] label - URL (bare URL, no
-  angle brackets). Keep labels short.
+- Finish with a line **Sources** then one source per line. If that evidence item shows a URL in
+  parentheses, write: [n] label - URL (bare URL, no angle brackets). If it has NO URL, write just:
+  [n] label. NEVER write a URL that was not given in the evidence.
 
-Content: answer the request directly and briefly. If the evidence is thin or conflicting, say so
-plainly. Do not invent facts, URLs, or figures. Do not use em dashes.`;
+Content: answer the request directly and briefly. Use the exact figures and labels from the evidence;
+do not reinterpret or relabel them (for example, do not call a block number a balance). If the
+evidence is thin or conflicting, say so plainly. Do not invent facts, URLs, or figures. No em dashes.`;
 
 export interface SynthesisInput {
   prompt: string;

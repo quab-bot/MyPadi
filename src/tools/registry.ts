@@ -140,6 +140,63 @@ const youtubeTranscript: ToolSpec = {
   buildBody: (i) => i,
 };
 
+// --- Workflow A (extended): Instagram + TikTok keyword search. Both have sandbox offers. ---
+// Verified against the live catalogue 2026-11-04 (fixed_result_bundle, not prorated).
+
+const instagramSearch: ToolSpec = {
+  id: 'monid.instagram.apify.apify-instagram-search-scraper',
+  title: 'Search Instagram',
+  method: 'POST',
+  network: 'both',
+  free: false,
+  note: 'fixed_result_bundle, NOT prorated: $0.006 (1) / $0.018 (5) / $0.033 (10). Prefer maxResults=1.',
+  schema: z
+    .object({
+      body: z
+        .object({
+          search: z.string().min(1).max(256),
+          searchType: z.enum(['place', 'user', 'hashtag', 'popular']).optional(),
+        })
+        .strict(),
+      maxResults: z.union([z.literal(1), z.literal(5), z.literal(10)]),
+    })
+    .strict(),
+  url: () => `${GATEWAY_BASE}/v1/social/instagram/tools/apify-apify-instagram-search-scraper`,
+  buildBody: (i) => i,
+};
+
+const tiktokSearch: ToolSpec = {
+  id: 'monid.tiktok.apify.apidojo-tiktok-scraper',
+  title: 'Search TikTok',
+  method: 'POST',
+  network: 'both',
+  free: false,
+  note: 'fixed_result_bundle, NOT prorated: $0.0036 (1) / $0.006 (5) / $0.009 (10). Prefer maxResults=1.',
+  schema: z
+    .object({
+      body: z
+        .object({
+          keywords: z.array(z.string().min(1).max(256)).min(1).max(5),
+          dateRange: z
+            .enum([
+              'DEFAULT',
+              'ALL_TIME',
+              'YESTERDAY',
+              'THIS_WEEK',
+              'THIS_MONTH',
+              'LAST_THREE_MONTHS',
+              'LAST_SIX_MONTHS',
+            ])
+            .optional(),
+        })
+        .strict(),
+      maxResults: z.union([z.literal(1), z.literal(5), z.literal(10)]),
+    })
+    .strict(),
+  url: () => `${GATEWAY_BASE}/v1/social/tiktok/tools/apify-apidojo-tiktok-scraper`,
+  buildBody: (i) => i,
+};
+
 // --- Workflow B: competitor / jobs research on LinkedIn (all have sandbox offers) ---
 // Prices and sandbox availability verified live against the catalogue + 402 quotes 2026-10-30.
 
@@ -308,6 +365,8 @@ export const TOOLS: ToolSpec[] = [
   redditSearch,
   youtubeSearch,
   youtubeTranscript,
+  instagramSearch,
+  tiktokSearch,
   linkedinCompanyPosts,
   linkedinProfilePosts,
   linkedinJobSearch,

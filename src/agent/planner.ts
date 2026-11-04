@@ -20,15 +20,21 @@ export interface PlanResult {
 const SEARCH_SYSTEM = `You are MyPadi's planner. The user wants a researched, sourced answer.
 Propose search steps using ONLY these tools:
 
-- "x.posts.search": body { "query": string, "type"?: "top"|"latest"|"media"|"people"|"lists" }
-- "reddit.posts.search": body { "query": string, "sort"?: "relevance"|"hot"|"top"|"new"|"comments", "timeRange"?: "all"|"year"|"month"|"week"|"day"|"hour" }
-- "youtube.videos.search": body { "query": string }
+- "x.posts.search": input { "query": string, "type"?: "top"|"latest"|"media"|"people"|"lists" }
+- "reddit.posts.search": input { "query": string, "sort"?: "relevance"|"hot"|"top"|"new"|"comments", "timeRange"?: "all"|"year"|"month"|"week"|"day"|"hour" }
+- "youtube.videos.search": input { "query": string }
+- "monid.instagram.apify.apify-instagram-search-scraper": input { "body": { "search": string, "searchType"?: "hashtag"|"popular"|"user"|"place" }, "maxResults": 1 }
+- "monid.tiktok.apify.apidojo-tiktok-scraper": input { "body": { "keywords": [string] }, "maxResults": 1 }
 
 Rules:
 - Return STRICT JSON: {"steps":[{"tool":"<id>","input":{...}}, ...]}.
-- Derive focused search queries from the user's request. Prefer 1 step per platform (3 total).
-- Use ONLY the fields listed. Do not invent fields or tools.
-- Keep queries short and specific.`;
+- Derive focused search queries from the user's request. Prefer 1 step per platform.
+- Choose the platforms that fit the question. For broad public sentiment use X, Reddit and YouTube;
+  add Instagram and/or TikTok when the topic is visual, consumer, cultural, or short-video driven.
+  Use 3 to 5 steps total; do not use every platform just because it exists.
+- On Instagram and TikTok, maxResults MUST be 1 (cost control). For Instagram prefer searchType
+  "hashtag" or "popular". For TikTok put the search terms in the "keywords" array.
+- Use ONLY the fields listed. Do not invent fields or tools. Keep queries short and specific.`;
 
 const TRANSCRIPT_SYSTEM = `You are MyPadi's planner, second pass. You are given candidate YouTube
 videos and the user's request. Choose the few MOST relevant videos to transcribe (depth costs money,
