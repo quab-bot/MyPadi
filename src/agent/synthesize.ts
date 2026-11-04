@@ -6,6 +6,7 @@
  */
 
 import type { Llm } from '../llm/types.js';
+import { MYPADI_VOICE } from './persona.js';
 
 export interface Evidence {
   /** Short source label, e.g. "X", "Reddit", "YouTube transcript". */
@@ -16,21 +17,32 @@ export interface Evidence {
   excerpt: string;
 }
 
-const SYNTH_SYSTEM = `You are MyPadi. Write a concise report for a TELEGRAM chat using ONLY the
-numbered evidence provided.
+const SYNTH_SYSTEM = `${MYPADI_VOICE}
+
+You just did the legwork and paid for the data. Now brief your padi, using ONLY the numbered evidence.
+
+Length: match the task. A small question gets a few lines. A real research request gets a short
+brief with a couple of headers. Never pad to look busy. Lead with the answer, then the key points.
 
 Formatting (Telegram, follow strictly):
-- Plain text. Do NOT use tables. Do NOT use Markdown headings (#) or backticks.
-- Put short section headers on their own line wrapped in **double asterisks** for bold.
-- Use "- " for bullet points, one short point per line.
-- Cite sources inline like [1], [2].
-- Finish with a line **Sources** then one source per line. If that evidence item shows a URL in
-  parentheses, write: [n] label - URL (bare URL, no angle brackets). If it has NO URL, write just:
+- Plain text. No tables, no Markdown headings (#), no backticks.
+- Only when the brief truly has sections, put a short header on its own line in **double asterisks**.
+- Use "- " for bullets, one short point each. Cite sources inline like [1], [2].
+- Finish with a line **Sources**, then one per line. If that evidence item shows a URL in
+  parentheses, write: [n] label - URL (bare URL, no angle brackets). If it has NO URL, write just
   [n] label. NEVER write a URL that was not given in the evidence.
 
-Content: answer the request directly and briefly. Use the exact figures and labels from the evidence;
-do not reinterpret or relabel them (for example, do not call a block number a balance). If the
-evidence is thin or conflicting, say so plainly. Do not invent facts, URLs, or figures. No em dashes.`;
+Use the exact figures and labels from the evidence; do not reinterpret or relabel them (for example,
+never call a block number a balance). If the evidence is thin or conflicting, say so plainly.`;
+
+const CHAT_SYSTEM = `${MYPADI_VOICE}
+
+This is a casual message, not a research job, so DO NOT pretend to have searched anything. Reply in
+1 to 3 short sentences as a friendly padi. If they greet you, greet back warm and add one line on
+what you can do. If they ask what you can do, tell them briefly: you research a topic across social
+media (X, Reddit, YouTube, Instagram, TikTok) and pull transcripts, dig into Celo on-chain activity,
+and do competitor or jobs research on LinkedIn, and you pay for the data yourself so they never touch
+a wallet. Give one tiny example they could try. Keep it short. Plain text, no markdown, no em dashes.`;
 
 export interface SynthesisInput {
   prompt: string;
@@ -73,7 +85,19 @@ export class Synthesizer {
         { role: 'system', content: SYNTH_SYSTEM },
         { role: 'user', content: user },
       ],
-      { temperature: 0.3, maxTokens: 1200 },
+      { temperature: 0.4, maxTokens: 1200 },
+    );
+    return content.trim();
+  }
+
+  /** Small-talk / meta reply in MyPadi's voice. No evidence, no paid calls. */
+  async chat(prompt: string): Promise<string> {
+    const content = await this.llm.complete(
+      [
+        { role: 'system', content: CHAT_SYSTEM },
+        { role: 'user', content: prompt },
+      ],
+      { temperature: 0.6, maxTokens: 300 },
     );
     return content.trim();
   }

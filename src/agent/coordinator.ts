@@ -74,6 +74,13 @@ export class Coordinator {
     const kind = classifyWorkflow(task.prompt).workflow;
     await repo.setTaskStatus(task.id, 'running');
     try {
+      // Small talk / meta: reply directly in MyPadi's voice, no paid research.
+      if (kind === 'chat') {
+        const reply = await synthesizer.chat(task.prompt);
+        await repo.saveOutput(task.id, reply, []);
+        await repo.setTaskStatus(task.id, 'done');
+        return reply;
+      }
       const evidence =
         kind === 'onchain'
           ? await this.gatherOnchain(task)

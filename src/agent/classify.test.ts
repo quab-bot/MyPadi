@@ -38,6 +38,19 @@ describe('classifyWorkflow', () => {
     expect(classifyWorkflow('research competitors for my startup').workflow).toBe('competitor');
   });
 
+  it('routes greetings, thanks and meta questions to chat (no paid research)', () => {
+    for (const p of ['hi', 'how far my padi', 'thanks!', '/start', 'good morning', 'who are you', 'what can you do?']) {
+      expect(classifyWorkflow(p).workflow).toBe('chat');
+    }
+  });
+
+  it('does not let a greeting word hijack a real research request', () => {
+    expect(classifyWorkflow('hello, what are people saying about Celo?').workflow).toBe('intel');
+    expect(
+      classifyWorkflow('hey, investigate 0xe7C8e60a40436c3ab3875fbdB9b5a26D9518ECc3').workflow,
+    ).toBe('onchain');
+  });
+
   it('on-chain still wins when both signals appear', () => {
     const c = classifyWorkflow('is 0xe7C8e60a40436c3ab3875fbdB9b5a26D9518ECc3 hiring on linkedin?');
     expect(c.workflow).toBe('onchain');

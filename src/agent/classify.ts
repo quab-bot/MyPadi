@@ -7,7 +7,12 @@
  * paid path. The coordinator validates and budgets every step regardless of this choice.
  */
 
-export type Workflow = 'intel' | 'onchain' | 'competitor';
+export type Workflow = 'chat' | 'intel' | 'onchain' | 'competitor';
+
+/** Meta / small-talk the bot should answer directly (free), never a paid research run. */
+const META_RE = /\b(who\s+(are|r)\s+(you|u)|who\s+be\s+you|what\s+(are|r)\s+(you|u)|what\s+can\s+you\s+do|what\s+do\s+you\s+do|how\s+do\s+you\s+work|what\s+is\s+mypadi|wetin\s+you\s+fit\s+do)\b/;
+/** Greetings / thanks: only treated as chat when the WHOLE message is short (not a research ask). */
+const GREETING_RE = /^(\s*)(\/(start|help)\b|hi|hiya|hello|hey+|yo+|sup|howdy|hola|good\s+(morning|afternoon|evening|day)|how\s+(are|r|you|u|far|body)\b|how\s+you\s+dey|wetin\s+dey|thanks|thank\s+you|thanks\s+padi|thx|well\s+done|nice\s+one|good\s+job|correct|abeg)/i;
 
 /** 0x + exactly 40 hex, not part of a longer hex run (an EVM address). */
 const ADDRESS_RE = /\b0x[0-9a-fA-F]{40}(?![0-9a-fA-F])/;
@@ -78,9 +83,23 @@ export function classifyWorkflow(prompt: string): Classification {
   const onchain = hasConcrete || ONCHAIN_PHRASES.some((k) => p.includes(k));
   const competitor = COMPETITOR_PHRASES.some((k) => p.includes(k));
 
-  // On-chain wins over competitor (a concrete address/hash is the strongest signal); both
-  // win over the default intel report.
-  const workflow: Workflow = onchain ? 'onchain' : competitor ? 'competitor' : 'intel';
+  // Small talk / meta: answer directly and free. A greeting only counts when the whole message is
+  // short (<= 6 words) and carries no concrete research target, so "hello, investigate 0x..." still
+  // routes to research. Meta ("what can you do") is always chat. On-chain/competitor still win if a
+  // concrete signal is present.
+  const wordCount = prompt.trim().split(/\s+/).filter(Boolean).length;
+  const isChat =
+    !hasConcrete && (META_RE.test(p) || (GREETING_RE.test(prompt) && wordCount <= 6));
+
+  // On-chain wins over competitor (a concrete address/hash is the strongest signal); both win over
+  // the default intel report; chat wins over everything when nothing concrete was asked.
+  const workflow: Workflow = isChat
+    ? 'chat'
+    : onchain
+      ? 'onchain'
+      : competitor
+        ? 'competitor'
+        : 'intel';
 
   return { workflow, addresses, hashes };
 }
