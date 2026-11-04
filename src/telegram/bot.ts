@@ -6,10 +6,15 @@
 
 import type { TaskRepo } from '../db/repo.js';
 import { TelegramClient } from './client.js';
+import { classifyWorkflow } from '../agent/classify.js';
 
 const WELCOME =
-  'Hi, I am MyPadi. Tell me what you want researched in plain language and I will search real sources, ' +
-  'check what I find, and reply with a sourced report. Example: "What are people saying about Celo this week?"';
+  'How far, I be MyPadi, your padi for getting things done. Tell me what you want in plain language and ' +
+  'I go find real sources, check am well well, and bring you the gist. For example: "What are people ' +
+  'saying about Celo this week?", or "Investigate this Celo wallet 0x...". No wahala, I dey ground.';
+
+/** Short, on-voice note while a real research run happens. Skipped for small talk. */
+const WORKING_NOTE = 'On it, my padi. Let me dig in and come back with the gist and sources shortly.';
 
 export interface BotHandle {
   stop(): void;
@@ -43,10 +48,11 @@ export function runBot(opts: {
 
           await repo.upsertUser(String(msg.from.id), msg.from.username);
           await repo.createTask(String(msg.from.id), text);
-          await client.sendMessage(
-            chatId,
-            'On it. I will research this and reply with sources. This can take a minute.',
-          );
+          // Only promise research when we are actually about to research. Small talk gets a quick
+          // reply from the worker instead, so a "digging in" note there would be a lie.
+          if (classifyWorkflow(text).workflow !== 'chat') {
+            await client.sendMessage(chatId, WORKING_NOTE);
+          }
         }
       } catch (e) {
         opts.onError?.(e);
