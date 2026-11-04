@@ -48,8 +48,11 @@ function build() {
       {
         type: 'telegram-bot',
         description: 'Primary user interface. Users send tasks in natural language.',
-        // The bot handle is set from @BotFather; filled in agent.json once known.
-        endpoint: 'https://t.me/',
+        // Bot handle from @BotFather, via TELEGRAM_BOT_USERNAME in .env (no leading @).
+        endpoint: (() => {
+          const u = (process.env.TELEGRAM_BOT_USERNAME || '').replace(/^@/, '').trim();
+          return u ? `https://t.me/${u}` : 'https://t.me/';
+        })(),
       },
       {
         type: 'http-api',
