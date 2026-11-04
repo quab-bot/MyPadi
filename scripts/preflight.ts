@@ -9,12 +9,11 @@
  * Exit code is 0 only when nothing is FAIL (and, in Phase 2, nothing is PENDING).
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { privateKeyToAccount } from 'viem/accounts';
 import { env } from '../src/config/env.js';
-import { checkIdentity, TAG, IDENTITY_REGISTRY } from '../src/config/identity.js';
-import { loadGoLive, agentUri, REPO_ROOT } from '../src/config/golive.js';
+import { checkIdentity, TAG } from '../src/config/identity.js';
+import { loadGoLive, agentUri } from '../src/config/golive.js';
 import { TelegramClient } from '../src/telegram/client.js';
 import { publicCeloClient } from '../src/chain/attribution.js';
 
@@ -80,25 +79,31 @@ async function run(): Promise<Check[]> {
     });
   }
 
-  // 3. buy keystore present + correct network.
+  // 3. buy keystore present + correct network. Works for both backends: we ask buy
+  //    itself (`buy whoami`) rather than reading a file the `file` backend happens to
+  //    write, since the mainnet `system` (OS keychain) backend keeps no accounts.json.
+  //    Must run inside an unlocked-keyring session on the server (see start-with-keyring.sh).
   try {
-    const accPath = join(REPO_ROOT, env.BUY_HOME.replace(/^\.\//, ''), 'accounts.json');
-    const accounts = JSON.parse(readFileSync(accPath, 'utf8')) as unknown;
-    const txt = JSON.stringify(accounts).toLowerCase();
-    const hasAccount = txt.includes(env.BUY_ACCOUNT.toLowerCase());
-    const onMainnet = txt.includes('celo') && !txt.includes('sepolia');
-    if (!hasAccount) {
-      checks.push({ name: 'buy keystore account', status: 'fail', detail: `account "${env.BUY_ACCOUNT}" not found in ${accPath}` });
+    const bin = process.env.BUY_BIN || 'buy';
+    const out = execFileSync(bin, ['whoami'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 30_000,
+    }).toLowerCase();
+    const hasWallet = derived ? out.includes(derived.toLowerCase()) : out.includes('pays from');
+    const onMainnet = out.includes('on celo') && !out.includes('sepolia');
+    if (!hasWallet) {
+      checks.push({ name: 'buy keystore account', status: 'fail', detail: 'buy whoami did not show the agent wallet' });
     } else {
       checks.push({
         name: 'buy keystore account',
         status: phase2 ? (onMainnet ? 'pass' : 'fail') : 'pass',
-        detail: `account "${env.BUY_ACCOUNT}" present; network ${onMainnet ? 'mainnet' : 'sepolia/sandbox'}`,
+        detail: `account present; network ${onMainnet ? 'mainnet' : 'sepolia/sandbox'}`,
         goLiveOnly: !onMainnet,
       });
     }
-  } catch {
-    checks.push({ name: 'buy keystore account', status: phase2 ? 'fail' : 'pending', detail: 'buy keystore not set up yet (wallet-new --import)' });
+  } catch (e) {
+    checks.push({ name: 'buy keystore account', status: phase2 ? 'fail' : 'pending', detail: `buy whoami failed (keyring locked or no account?): ${errMsg(e)}` });
   }
 
   // 4. buy daily cap configured.
@@ -178,22 +183,34 @@ async function run(): Promise<Check[]> {
     checks.push({ name: 'Mainnet CELO balance (gas)', status: 'pending', detail: 'checked in Phase 2 only', goLiveOnly: true });
   }
 
-  // 10. go-live placeholders filled (go-live).
-  const placeholders: Array<[string, string]> = [
+  // 10a. go-live values needed BEFORE registration (the registration tx uses agentUri,
+  //      which needs publicBaseUrl; the wallet is the signer). These must be real in Phase 2.
+  const requiredNow: Array<[string, string]> = [
     ['agentWallet', cfg.agentWallet],
     ['publicBaseUrl', cfg.publicBaseUrl],
+  ];
+  const missingNow = requiredNow
+    .filter(([, v]) => !v.trim() || v.includes('example.com'))
+    .map(([k]) => k);
+  checks.push({
+    name: 'go-live.config (pre-register)',
+    status: missingNow.length === 0 ? 'pass' : phase2 ? 'fail' : 'pending',
+    detail: missingNow.length === 0 ? 'agentWallet + publicBaseUrl set' : `unfilled: ${missingNow.join(', ')}`,
+    goLiveOnly: true,
+  });
+
+  // 10b. Values filled LATER (registration outputs + submission doc link). Absence is not a
+  //      failure: register-8004 writes agentId + firstTaggedTxHash; loopsProjectUrl is for docs.
+  const laterFilled: Array<[string, string]> = [
     ['agentId', cfg.agentId],
     ['firstTaggedTxHash', cfg.firstTaggedTxHash],
     ['loopsProjectUrl', cfg.loopsProjectUrl],
   ];
-  const missing = placeholders
-    .filter(([, v]) => !v.trim() || v.includes('example.com'))
-    .map(([k]) => k);
+  const missingLater = laterFilled.filter(([, v]) => !v.trim()).map(([k]) => k);
   checks.push({
-    name: 'go-live.config filled',
-    status: missing.length === 0 ? 'pass' : phase2 ? 'fail' : 'pending',
-    detail: missing.length === 0 ? 'all values set' : `unfilled: ${missing.join(', ')}`,
-    goLiveOnly: true,
+    name: 'go-live.config (filled later)',
+    status: missingLater.length === 0 ? 'pass' : 'warn',
+    detail: missingLater.length === 0 ? 'agentId, firstTaggedTxHash, loopsProjectUrl set' : `still to set: ${missingLater.join(', ')}`,
   });
 
   return checks;
