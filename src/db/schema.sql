@@ -76,3 +76,18 @@ CREATE TABLE IF NOT EXISTS outputs (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_outputs_task ON outputs(task_id);
+
+-- Watchtower: standing watches that re-run a query on a schedule and notify on NEW results.
+-- Each check runs as a normal task, so it is budgeted and tagged like any other paid call.
+CREATE TABLE IF NOT EXISTS watches (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       BIGINT NOT NULL REFERENCES users(id),
+  query         TEXT NOT NULL,
+  interval_min  INT NOT NULL DEFAULT 360,            -- how often to check (minutes)
+  active        BOOLEAN NOT NULL DEFAULT true,
+  seen          JSONB NOT NULL DEFAULT '[]'::jsonb,  -- result fingerprints already reported
+  last_run_at   TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_watches_user ON watches(user_id);
+CREATE INDEX IF NOT EXISTS idx_watches_active ON watches(active);

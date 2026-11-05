@@ -4,15 +4,21 @@
  * to deliver the result.
  */
 
-import type { TaskRepo } from '../db/repo.js';
+import type { TaskRepo, WatchRepo } from '../db/repo.js';
 import { TelegramClient, type TgDocument } from './client.js';
 import { classifyWorkflow, buildDocPrompt } from '../agent/classify.js';
+
+/** Watchtower limits (spend safety: fewer, less frequent watches). */
+const MAX_WATCHES_PER_USER = 5;
+const DEFAULT_WATCH_INTERVAL_MIN = 360; // 6 hours
+const MIN_WATCH_INTERVAL_MIN = 60; // 1 hour floor
 
 const WELCOME =
   "Hi, I'm MyPadi, your personal assistant. Tell me what you need in plain language and I'll find real " +
   'sources, check them properly, and bring you a clear answer with links. For example: "What are people ' +
   'saying about Celo this week?", "Find flights from Lagos to London next Friday", or "Investigate this ' +
-  'Celo wallet 0x...".';
+  'Celo wallet 0x...". You can also send me a text document to summarize, or set a watch with ' +
+  '"/watch new Celo grants" and I will ping you when something new shows up.';
 
 /** Short, on-voice note while a real research run happens. Skipped for small talk. */
 const WORKING_NOTE = "On it. Let me dig in, I'll come back shortly with the findings and sources.";
@@ -41,9 +47,10 @@ export interface BotHandle {
 export function runBot(opts: {
   client: TelegramClient;
   repo: TaskRepo;
+  watches: WatchRepo;
   onError?: (e: unknown) => void;
 }): BotHandle {
-  const { client, repo } = opts;
+  const { client, repo, watches } = opts;
   let running = true;
   let offset = 0;
 
@@ -72,6 +79,13 @@ export function runBot(opts: {
           }
           if (!text) continue;
 
+          // Watchtower commands.
+          if (text === '/watches' || text.startsWith('/watch ') || text === '/watch' || text.startsWith('/unwatch')) {
+            await repo.upsertUser(String(msg.from.id), msg.from.username);
+            await handleWatchCommand(client, watches, chatId, String(msg.from.id), text);
+            continue;
+          }
+
           await repo.upsertUser(String(msg.from.id), msg.from.username);
           await repo.createTask(String(msg.from.id), text);
           // Only promise research when we are actually about to research. Small talk gets a quick
@@ -93,6 +107,63 @@ export function runBot(opts: {
       running = false;
     },
   };
+}
+
+/** Handle /watch, /watches, /unwatch. Watchtower re-checks a query on a schedule and pings on new results. */
+async function handleWatchCommand(
+  client: TelegramClient,
+  watches: WatchRepo,
+  chatId: number,
+  userId: string,
+  text: string,
+): Promise<void> {
+  // /watches - list active watches.
+  if (text === '/watches') {
+    const list = await watches.listWatches(userId);
+    if (list.length === 0) {
+      await client.sendMessage(chatId, 'You have no active watches. Start one with: /watch <what to track>');
+      return;
+    }
+    const lines = list.map((w, i) => `${i + 1}. ${w.query} (every ${w.intervalMin} min)`);
+    await client.sendMessage(chatId, `Your watches:\n${lines.join('\n')}\n\nStop one with /unwatch <number>.`);
+    return;
+  }
+
+  // /unwatch <number> - deactivate by the number shown in /watches.
+  if (text.startsWith('/unwatch')) {
+    const arg = text.replace('/unwatch', '').trim();
+    const n = Number(arg);
+    const list = await watches.listWatches(userId);
+    if (!arg || !Number.isInteger(n) || n < 1 || n > list.length) {
+      await client.sendMessage(chatId, 'Use /unwatch <number> from your /watches list.');
+      return;
+    }
+    const target = list[n - 1]!;
+    const ok = await watches.deactivateWatch(userId, target.id);
+    await client.sendMessage(chatId, ok ? `Stopped watching: ${target.query}` : 'Could not stop that watch.');
+    return;
+  }
+
+  // /watch <query> - create a watch.
+  const query = text.replace('/watch', '').trim();
+  if (!query) {
+    await client.sendMessage(
+      chatId,
+      'Tell me what to keep an eye on. Example: /watch new Celo grants and hackathons. I will check regularly and ping you when something new shows up.',
+    );
+    return;
+  }
+  const count = await watches.countActiveWatches(userId);
+  if (count >= MAX_WATCHES_PER_USER) {
+    await client.sendMessage(chatId, `You already have ${MAX_WATCHES_PER_USER} watches running. Stop one with /unwatch before adding another.`);
+    return;
+  }
+  const interval = Math.max(MIN_WATCH_INTERVAL_MIN, DEFAULT_WATCH_INTERVAL_MIN);
+  await watches.createWatch(userId, query, interval);
+  await client.sendMessage(
+    chatId,
+    `Watchtower is on it. I will check "${query}" regularly and message you when there is something new. See all with /watches.`,
+  );
 }
 
 /** Download a readable document, truncate it, and queue a summary task. */

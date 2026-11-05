@@ -7,6 +7,8 @@ count against that cap.
 
 ## Prerequisites (do once per session)
 - SSH tunnel to the VPS Postgres is up (local port 55432). See `memory/dev-environment`.
+- Run `npm run migrate` once so the new `watches` table (Watchtower) exists. The schema is
+  idempotent, so it is safe to re-run.
 - `.env` has `BUY_MODE=sandbox`, a working `GROQ_API_KEY`, `DATABASE_URL`, and the buy key reachable
   (OS keychain locally; file backend only on the Linux VPS, see `memory/buy-keystore-windows`).
 - The live app worker is stopped (`demo-sandbox` claims the task itself; a running worker would race).
@@ -26,6 +28,7 @@ wording is what selects the workflow.
 | competitor (B) | linkedin, competitor, hiring, jobs | paid: 2-3 LinkedIn calls |
 | on-chain (C) | 0x address / tx hash, or on-chain vocabulary | sandbox: free SQD only (Chainstack is mainnet-only) |
 | document (E) | a file uploaded to the Telegram bot | free (no buy) |
+| watchtower | `/watch <query>` on the bot; re-checks on a schedule | paid: each check is a research task (budgeted) |
 | browser (B-web) | deferred, not built | n/a |
 
 ## Day 1: paid workflows (budgeted to stay under the $0.10/day sandbox cap)
@@ -70,6 +73,16 @@ Document summarization makes no paid call, so test it through the live/local bot
 3. Expect: "Got your document..." then a summary that cites the file name as the source.
 4. Send a `.pdf`: expect the polite "I can read text documents right now..." reply (PDF parsing is a
    planned follow-up).
+
+## Watchtower (recurring watches) - test on the running bot
+A new watch has `last_run_at = null`, so the scheduler runs it on its next tick (within ~1 minute):
+you do NOT have to wait the full interval for the first check.
+1. Start the bot in sandbox. Send: `/watch new Celo grants and hackathons`
+2. Within ~1 minute you should get: "Watchtower is now watching..." then a baseline briefing. This
+   first check spends like one opportunity/intel task (counts against the $0.10/day sandbox cap).
+3. `/watches` lists it; `/unwatch 1` stops it.
+4. On later checks (after `interval_min`, default 360), it messages you ONLY when a new result URL
+   appears; otherwise it stays silent. Spend is bounded by the ledger caps + a 5-watch-per-user limit.
 
 ## What "pass" looks like
 - Each paid workflow produces a report and at least one `[paid] ... tx=0x...` settlement row.

@@ -23,6 +23,7 @@ import { Coordinator } from './agent/coordinator.js';
 import { TelegramClient } from './telegram/client.js';
 import { runBot } from './telegram/bot.js';
 import { runWorker } from './queue/worker.js';
+import { runWatchtower } from './queue/watchtower.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..');
@@ -88,14 +89,16 @@ async function main(): Promise<void> {
   console.log(`HTTP listening on :${env.PORT}`);
 
   const onError = (e: unknown) => console.error('[runtime]', e instanceof Error ? e.message : e);
-  const bot = runBot({ client: tg, repo, onError });
+  const bot = runBot({ client: tg, repo, watches: repo, onError });
   const worker = runWorker({ repo, coordinator, client: tg, onError });
-  console.log('Bot polling and worker started. Send your bot a message.');
+  const watchtower = runWatchtower({ watches: repo, repo, coordinator, client: tg, onError });
+  console.log('Bot polling, worker, and watchtower started. Send your bot a message.');
 
   const shutdown = async () => {
     console.log('\nShutting down...');
     bot.stop();
     worker.stop();
+    watchtower.stop();
     await app.close().catch(() => {});
     await closePool().catch(() => {});
     process.exit(0);

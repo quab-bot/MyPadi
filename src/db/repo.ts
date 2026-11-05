@@ -44,11 +44,39 @@ export interface TaskRepo {
   saveOutput(taskId: string, content: string, sources: unknown): Promise<void>;
 }
 
+export interface WatchRow {
+  id: string;
+  userId: string;
+  query: string;
+  intervalMin: number;
+  seen: string[];
+}
+
+/** Watchtower persistence (implemented by PgTaskRepo). */
+export interface WatchRepo {
+  createWatch(userId: string, query: string, intervalMin: number): Promise<string>;
+  listWatches(userId: string): Promise<WatchRow[]>;
+  countActiveWatches(userId: string): Promise<number>;
+  deactivateWatch(userId: string, id: string): Promise<boolean>;
+  claimDueWatches(limit: number): Promise<WatchRow[]>;
+  finishWatchRun(id: string, seen: string[]): Promise<void>;
+}
+
 function toTaskRow(r: any): TaskRow {
   return { id: r.id, userId: String(r.user_id), prompt: r.prompt, status: r.status };
 }
 
-export class PgTaskRepo implements TaskRepo {
+function toWatchRow(r: any): WatchRow {
+  return {
+    id: r.id,
+    userId: String(r.user_id),
+    query: r.query,
+    intervalMin: Number(r.interval_min),
+    seen: Array.isArray(r.seen) ? r.seen.map(String) : [],
+  };
+}
+
+export class PgTaskRepo implements TaskRepo, WatchRepo {
   async upsertUser(id: string, username?: string): Promise<void> {
     await getPool().query(
       `INSERT INTO users (id, username) VALUES ($1, $2)
@@ -128,5 +156,60 @@ export class PgTaskRepo implements TaskRepo {
       `INSERT INTO outputs (task_id, content, sources) VALUES ($1,$2,$3)`,
       [taskId, content, sources == null ? null : JSON.stringify(sources)],
     );
+  }
+
+  // --- Watchtower (WatchRepo) ---
+
+  async createWatch(userId: string, query: string, intervalMin: number): Promise<string> {
+    const res = await getPool().query(
+      `INSERT INTO watches (user_id, query, interval_min) VALUES ($1,$2,$3) RETURNING id`,
+      [userId, query, intervalMin],
+    );
+    return res.rows[0].id;
+  }
+
+  async listWatches(userId: string): Promise<WatchRow[]> {
+    const res = await getPool().query(
+      `SELECT * FROM watches WHERE user_id=$1 AND active ORDER BY created_at`,
+      [userId],
+    );
+    return res.rows.map(toWatchRow);
+  }
+
+  async countActiveWatches(userId: string): Promise<number> {
+    const res = await getPool().query(
+      `SELECT count(*)::int AS n FROM watches WHERE user_id=$1 AND active`,
+      [userId],
+    );
+    return res.rows[0]?.n ?? 0;
+  }
+
+  async deactivateWatch(userId: string, id: string): Promise<boolean> {
+    const res = await getPool().query(
+      `UPDATE watches SET active=false WHERE id=$1 AND user_id=$2 AND active RETURNING id`,
+      [id, userId],
+    );
+    return (res.rowCount ?? 0) > 0;
+  }
+
+  /** Atomically claim watches whose interval has elapsed (stamps last_run_at so ticks do not race). */
+  async claimDueWatches(limit: number): Promise<WatchRow[]> {
+    const res = await getPool().query(
+      `UPDATE watches SET last_run_at = now()
+         WHERE id IN (
+           SELECT id FROM watches
+            WHERE active AND (last_run_at IS NULL OR last_run_at < now() - make_interval(mins => interval_min))
+            ORDER BY last_run_at NULLS FIRST
+            LIMIT $1
+            FOR UPDATE SKIP LOCKED
+         )
+       RETURNING id, user_id, query, interval_min, seen`,
+      [limit],
+    );
+    return res.rows.map(toWatchRow);
+  }
+
+  async finishWatchRun(id: string, seen: string[]): Promise<void> {
+    await getPool().query(`UPDATE watches SET seen=$2 WHERE id=$1`, [id, JSON.stringify(seen)]);
   }
 }

@@ -23,7 +23,7 @@ import {
   decodeChainBatch,
   extractDatasetNames,
 } from './extract.js';
-import { classifyWorkflow, parseDocPrompt } from './classify.js';
+import { classifyWorkflow, parseDocPrompt, type Workflow } from './classify.js';
 
 export interface CoordinatorDeps {
   repo: TaskRepo;
@@ -105,16 +105,7 @@ export class Coordinator {
         await repo.setTaskStatus(task.id, 'done');
         return report.content;
       }
-      const evidence =
-        kind === 'onchain'
-          ? await this.gatherOnchain(task)
-          : kind === 'competitor'
-            ? await this.gatherCompetitor(task)
-            : kind === 'travel'
-              ? await this.gatherTravel(task)
-              : kind === 'opportunity'
-                ? await this.gatherOpportunity(task)
-                : await this.gatherIntel(task);
+      const evidence = await this.gatherFor(kind, task);
       const report = await synthesizer.run({ prompt: task.prompt, evidence, guidance: SYNTH_GUIDANCE[kind] });
       await repo.saveOutput(
         task.id,
@@ -126,6 +117,48 @@ export class Coordinator {
     } catch (err) {
       await repo.setTaskStatus(task.id, 'failed');
       throw err;
+    }
+  }
+
+  /**
+   * Watchtower: run a standing watch's query as a normal (budgeted, tagged) research task and
+   * return BOTH the report and the evidence, so the scheduler can diff for new results. A watch is
+   * always research: chat/document routing is forced to the intel engine.
+   */
+  async runWatch(task: TaskRow): Promise<{ report: string; evidence: Evidence[] }> {
+    const { repo, synthesizer } = this.deps;
+    let kind = classifyWorkflow(task.prompt).workflow;
+    if (kind === 'chat' || kind === 'document') kind = 'intel';
+    await repo.setTaskStatus(task.id, 'running');
+    try {
+      const evidence = await this.gatherFor(kind, task);
+      const report = await synthesizer.run({ prompt: task.prompt, evidence, guidance: SYNTH_GUIDANCE[kind] });
+      await repo.saveOutput(
+        task.id,
+        report,
+        evidence.map((e) => ({ source: e.source, title: e.title, url: e.url })),
+      );
+      await repo.setTaskStatus(task.id, 'done');
+      return { report, evidence };
+    } catch (err) {
+      await repo.setTaskStatus(task.id, 'failed');
+      throw err;
+    }
+  }
+
+  /** Dispatch to the right gather* method for a research workflow. */
+  private async gatherFor(kind: Workflow, task: TaskRow): Promise<Evidence[]> {
+    switch (kind) {
+      case 'onchain':
+        return this.gatherOnchain(task);
+      case 'competitor':
+        return this.gatherCompetitor(task);
+      case 'travel':
+        return this.gatherTravel(task);
+      case 'opportunity':
+        return this.gatherOpportunity(task);
+      default:
+        return this.gatherIntel(task);
     }
   }
 
