@@ -52,6 +52,19 @@ export interface WatchRow {
   seen: string[];
 }
 
+export interface PaidCallRow {
+  capability: string;
+  paidMicro: number;
+  token?: string;
+  network?: string;
+  txHash?: string;
+}
+
+/** Read access to settled payments for the /proof command (implemented by PgTaskRepo). */
+export interface ProofRepo {
+  recentPaidCalls(userId: string, limit: number): Promise<PaidCallRow[]>;
+}
+
 /** Watchtower persistence (implemented by PgTaskRepo). */
 export interface WatchRepo {
   createWatch(userId: string, query: string, intervalMin: number): Promise<string>;
@@ -76,7 +89,7 @@ function toWatchRow(r: any): WatchRow {
   };
 }
 
-export class PgTaskRepo implements TaskRepo, WatchRepo {
+export class PgTaskRepo implements TaskRepo, WatchRepo, ProofRepo {
   async upsertUser(id: string, username?: string): Promise<void> {
     await getPool().query(
       `INSERT INTO users (id, username) VALUES ($1, $2)
@@ -211,5 +224,25 @@ export class PgTaskRepo implements TaskRepo, WatchRepo {
 
   async finishWatchRun(id: string, seen: string[]): Promise<void> {
     await getPool().query(`UPDATE watches SET seen=$2 WHERE id=$1`, [id, JSON.stringify(seen)]);
+  }
+
+  // --- Proof of payment (ProofRepo) ---
+
+  async recentPaidCalls(userId: string, limit: number): Promise<PaidCallRow[]> {
+    const res = await getPool().query(
+      `SELECT sc.capability, sc.paid_micro, sc.token, sc.network, sc.tx_hash
+         FROM service_calls sc JOIN tasks t ON t.id = sc.task_id
+        WHERE t.user_id = $1 AND sc.status = 'paid' AND sc.tx_hash IS NOT NULL
+        ORDER BY sc.created_at DESC
+        LIMIT $2`,
+      [userId, limit],
+    );
+    return res.rows.map((r: any) => ({
+      capability: r.capability,
+      paidMicro: Number(r.paid_micro ?? 0),
+      token: r.token ?? undefined,
+      network: r.network ?? undefined,
+      txHash: r.tx_hash ?? undefined,
+    }));
   }
 }

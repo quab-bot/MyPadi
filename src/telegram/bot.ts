@@ -4,9 +4,10 @@
  * to deliver the result.
  */
 
-import type { TaskRepo, WatchRepo } from '../db/repo.js';
+import type { TaskRepo, WatchRepo, ProofRepo } from '../db/repo.js';
 import { TelegramClient, type TgDocument } from './client.js';
 import { classifyWorkflow, buildDocPrompt } from '../agent/classify.js';
+import { usdFromMicro } from '../budget/money.js';
 
 /** Watchtower limits (spend safety: fewer, less frequent watches). */
 const MAX_WATCHES_PER_USER = 5;
@@ -48,9 +49,10 @@ export function runBot(opts: {
   client: TelegramClient;
   repo: TaskRepo;
   watches: WatchRepo;
+  proof: ProofRepo;
   onError?: (e: unknown) => void;
 }): BotHandle {
-  const { client, repo, watches } = opts;
+  const { client, repo, watches, proof } = opts;
   let running = true;
   let offset = 0;
 
@@ -86,6 +88,13 @@ export function runBot(opts: {
             continue;
           }
 
+          // Proof of payment: show the user what MyPadi has paid for, with settlement tx hashes.
+          if (text === '/proof') {
+            await repo.upsertUser(String(msg.from.id), msg.from.username);
+            await handleProofCommand(client, proof, chatId, String(msg.from.id));
+            continue;
+          }
+
           await repo.upsertUser(String(msg.from.id), msg.from.username);
           await repo.createTask(String(msg.from.id), text);
           // Only promise research when we are actually about to research. Small talk gets a quick
@@ -107,6 +116,30 @@ export function runBot(opts: {
       running = false;
     },
   };
+}
+
+/** Show the user their last paid service calls with settlement tx hashes (proof of payment). */
+async function handleProofCommand(
+  client: TelegramClient,
+  proof: ProofRepo,
+  chatId: number,
+  userId: string,
+): Promise<void> {
+  const calls = await proof.recentPaidCalls(userId, 10);
+  if (calls.length === 0) {
+    await client.sendMessage(chatId, 'No paid service calls yet. Give me a research task and I will show you exactly what I paid for.');
+    return;
+  }
+  const total = calls.reduce((s, c) => s + c.paidMicro, 0);
+  const lines = calls.map((c) => {
+    const price = `$${usdFromMicro(c.paidMicro)}`;
+    const tx = c.txHash ? ` tx ${c.txHash}` : '';
+    return `- ${c.capability} ${price} ${c.token ?? ''} ${c.network ?? ''}${tx}`.replace(/\s+/g, ' ').trim();
+  });
+  await client.sendMessage(
+    chatId,
+    `Here is what I have paid for recently (your last ${calls.length} calls, $${usdFromMicro(total)} total). Every line is a real x402 settlement on Celo:\n\n${lines.join('\n')}`,
+  );
 }
 
 /** Handle /watch, /watches, /unwatch. Watchtower re-checks a query on a schedule and pings on new results. */

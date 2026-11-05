@@ -10,7 +10,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { env, sandbox, budgetCaps } from './config/env.js';
-import { assertIdentity, TAG } from './config/identity.js';
+import { assertIdentity, TAG, REPO_URL } from './config/identity.js';
 import { getPool, closePool } from './db/pool.js';
 import { PgBudgetStore } from './db/budget-store.js';
 import { PgTaskRepo } from './db/repo.js';
@@ -74,8 +74,21 @@ async function main(): Promise<void> {
   const me = await tg.getMe();
   console.log(`Telegram bot connected: @${me.username}`);
 
-  // 3. Fastify (health + registration file for ERC-8004 agentURI).
+  // 3. Fastify (landing page + health + registration file for ERC-8004 agentURI).
   const app = Fastify({ logger: false });
+  const botUrl = (() => {
+    const u = (process.env.TELEGRAM_BOT_USERNAME || '').replace(/^@/, '').trim();
+    return u ? `https://t.me/${u}` : undefined;
+  })();
+  app.get('/', async (_req, reply) => {
+    let reg: { name?: string; description?: string; capabilities?: string[] } = {};
+    try {
+      reg = JSON.parse(await readFile(join(repoRoot, 'agent-registration.json'), 'utf8'));
+    } catch {
+      /* fall back to defaults below */
+    }
+    return reply.type('text/html').send(landingHtml(reg, botUrl));
+  });
   app.get('/health', async () => ({ ok: true, tag: TAG, mode: sandbox ? 'sandbox' : 'mainnet' }));
   app.get('/agent-registration.json', async (_req, reply) => {
     try {
@@ -89,7 +102,7 @@ async function main(): Promise<void> {
   console.log(`HTTP listening on :${env.PORT}`);
 
   const onError = (e: unknown) => console.error('[runtime]', e instanceof Error ? e.message : e);
-  const bot = runBot({ client: tg, repo, watches: repo, onError });
+  const bot = runBot({ client: tg, repo, watches: repo, proof: repo, onError });
   const worker = runWorker({ repo, coordinator, client: tg, onError });
   const watchtower = runWatchtower({ watches: repo, repo, coordinator, client: tg, onError });
   console.log('Bot polling, worker, and watchtower started. Send your bot a message.');
@@ -105,6 +118,60 @@ async function main(): Promise<void> {
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** A small, static landing page rendered from the registration file so copy stays in one place. */
+function landingHtml(
+  reg: { name?: string; description?: string; capabilities?: string[] },
+  botUrl?: string,
+): string {
+  const name = escapeHtml(reg.name ?? 'MyPadi');
+  const description = escapeHtml(reg.description ?? 'A general-purpose AI assistant on Telegram.');
+  const caps = (reg.capabilities ?? []).map((c) => `<li>${escapeHtml(c)}</li>`).join('');
+  const cta = botUrl
+    ? `<a class="cta" href="${escapeHtml(botUrl)}">Open MyPadi on Telegram</a>`
+    : '';
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${name}</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0f1115; color: #e8eaed; font: 16px/1.6 system-ui, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 72px 24px; }
+  h1 { font-size: 40px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  .lede { color: #b7bcc4; font-size: 18px; margin: 0 0 32px; }
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: #8b93a1; margin: 40px 0 12px; }
+  ul { list-style: none; padding: 0; margin: 0; }
+  li { padding: 12px 16px; background: #171a21; border: 1px solid #232833; border-radius: 10px; margin-bottom: 10px; }
+  .cta { display: inline-block; margin-top: 28px; padding: 12px 22px; background: #35c759; color: #06240f;
+         font-weight: 600; text-decoration: none; border-radius: 10px; }
+  footer { margin-top: 48px; color: #6b7280; font-size: 14px; }
+  a { color: #6ea8fe; }
+</style>
+</head>
+<body>
+<main>
+  <h1>${name}</h1>
+  <p class="lede">${description}</p>
+  ${cta}
+  <h2>What it can do</h2>
+  <ul>${caps}</ul>
+  <footer>
+    Built for the Agents on Open Rails hackathon (Build with buy). It pays for real services over
+    x402 on Celo, so you never touch a wallet.
+    <br><a href="${escapeHtml(REPO_URL)}">Source on GitHub</a> ·
+    <a href="/agent-registration.json">Agent registration (ERC-8004)</a>
+  </footer>
+</main>
+</body>
+</html>`;
 }
 
 main().catch((err) => {

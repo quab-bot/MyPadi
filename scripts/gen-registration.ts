@@ -21,10 +21,23 @@ import {
 import { loadGoLive, agentUri, REPO_ROOT } from '../src/config/golive.js';
 
 const DESCRIPTION =
-  'MyPadi is a general-purpose AI assistant on Telegram. Describe a task in plain language ' +
-  'and MyPadi plans the steps, pays for real external data and compute services over x402 on ' +
-  'Celo (via buy), checks the results, and returns a sourced report. Users never touch a wallet; ' +
-  'the project wallet sponsors usage under strict per-task, per-user and global budget caps.';
+  'MyPadi is a general-purpose AI assistant on Telegram. Describe a task in plain language and ' +
+  'MyPadi plans the steps, pays for real external services over x402 on Celo (via buy), checks the ' +
+  'results, and returns a sourced answer. It researches topics across X, Reddit, YouTube, Instagram ' +
+  'and TikTok (with video transcripts), finds open opportunities like hackathons and grants, ' +
+  'investigates Celo on-chain activity, searches flights, summarizes documents you send, and runs ' +
+  'standing watches that alert you when something new appears. Users never touch a wallet; the ' +
+  'project wallet sponsors usage under strict per-task, per-user and global budget caps.';
+
+const CAPABILITIES = [
+  'Multi-source intelligence reports across X, Reddit, YouTube, Instagram and TikTok, with video transcripts, sources and confidence notes',
+  'Opportunity discovery: open hackathons, grants, bounties and airdrops with deadlines, eligibility and how to apply',
+  'Celo on-chain investigation: wallet and transaction lookups, token balances, contract reads, gas and fees',
+  'Flight search across routes and dates',
+  'Document summaries from uploaded text files',
+  'Watchtower: standing watches that re-check a topic on a schedule and alert on new results',
+  'Competitor and jobs research on LinkedIn',
+];
 
 function build() {
   const cfg = loadGoLive();
@@ -34,6 +47,7 @@ function build() {
   const registration = {
     name: 'MyPadi',
     description: DESCRIPTION,
+    capabilities: CAPABILITIES,
     image: `${cfg.publicBaseUrl.replace(/\/$/, '')}/icon.png`,
     url: cfg.publicBaseUrl,
     active: true,
@@ -72,6 +86,7 @@ function build() {
     name: 'MyPadi',
     tagline: 'A general-purpose AI assistant on Telegram that pays for real services as it works.',
     description: DESCRIPTION,
+    capabilities: CAPABILITIES,
     repo: REPO_URL,
     track: TRACK,
     event: EVENT_SLUG,
