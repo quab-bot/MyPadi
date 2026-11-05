@@ -19,6 +19,7 @@ import {
   extractEvidence,
   extractYoutubeCandidates,
   extractChainEvidence,
+  extractFlightEvidence,
   decodeChainBatch,
   extractDatasetNames,
 } from './extract.js';
@@ -46,6 +47,7 @@ const SOURCE_LABEL: Record<string, string> = {
   'monid.youtube.apify.starvibe-youtube-video-transcript': 'YouTube transcript',
   'monid.instagram.apify.apify-instagram-search-scraper': 'Instagram',
   'monid.tiktok.apify.apidojo-tiktok-scraper': 'TikTok',
+  'flights.search': 'Flights',
   'sqd.datasets': 'SQD datasets',
   'sqd.head': 'SQD chain head',
   'sqd.finalized-head': 'SQD finalized head',
@@ -86,7 +88,9 @@ export class Coordinator {
           ? await this.gatherOnchain(task)
           : kind === 'competitor'
             ? await this.gatherCompetitor(task)
-            : await this.gatherIntel(task);
+            : kind === 'travel'
+              ? await this.gatherTravel(task)
+              : await this.gatherIntel(task);
       const report = await synthesizer.run({ prompt: task.prompt, evidence });
       await repo.saveOutput(
         task.id,
@@ -143,6 +147,22 @@ export class Coordinator {
     const plan = await planner.planCompetitor(task.prompt, this.opts.sandbox);
     for (const step of plan.steps) {
       const out = await this.executeStep(task, step, idx++);
+      evidence.push(...out.evidence);
+    }
+    return evidence;
+  }
+
+  /** Workflow D: flight search. One paid flights.search per route, rendered as itinerary evidence. */
+  private async gatherTravel(task: TaskRow): Promise<Evidence[]> {
+    const { planner } = this.deps;
+    const evidence: Evidence[] = [];
+    let idx = 0;
+    const today = new Date().toISOString().slice(0, 10);
+    const plan = await planner.planTravel(task.prompt, today, this.opts.sandbox);
+    const flightExtractor = (label: string, body: string): Evidence[] =>
+      extractFlightEvidence(label, body);
+    for (const step of plan.steps) {
+      const out = await this.executeStep(task, step, idx++, flightExtractor);
       evidence.push(...out.evidence);
     }
     return evidence;

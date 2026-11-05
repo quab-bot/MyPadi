@@ -9,12 +9,13 @@ import { TelegramClient } from './client.js';
 import { classifyWorkflow } from '../agent/classify.js';
 
 const WELCOME =
-  'How far, I be MyPadi, your padi for getting things done. Tell me what you want in plain language and ' +
-  'I go find real sources, check am well well, and bring you the gist. For example: "What are people ' +
-  'saying about Celo this week?", or "Investigate this Celo wallet 0x...". No wahala, I dey ground.';
+  "Hi, I'm MyPadi, your personal assistant. Tell me what you need in plain language and I'll find real " +
+  'sources, check them properly, and bring you a clear answer with links. For example: "What are people ' +
+  'saying about Celo this week?", "Find flights from Lagos to London next Friday", or "Investigate this ' +
+  'Celo wallet 0x...".';
 
 /** Short, on-voice note while a real research run happens. Skipped for small talk. */
-const WORKING_NOTE = 'On it, my padi. Let me dig in and come back with the gist and sources shortly.';
+const WORKING_NOTE = "On it. Let me dig in, I'll come back shortly with the findings and sources.";
 
 export interface BotHandle {
   stop(): void;

@@ -55,4 +55,17 @@ describe('classifyWorkflow', () => {
     const c = classifyWorkflow('is 0xe7C8e60a40436c3ab3875fbdB9b5a26D9518ECc3 hiring on linkedin?');
     expect(c.workflow).toBe('onchain');
   });
+
+  it('routes flight / travel prompts to travel', () => {
+    expect(classifyWorkflow('find flights from Lagos to London next Friday').workflow).toBe('travel');
+    expect(classifyWorkflow('cheapest flight to Accra in December').workflow).toBe('travel');
+    expect(classifyWorkflow('I need a round trip plane ticket to Nairobi').workflow).toBe('travel');
+  });
+
+  it('a concrete on-chain or competitor signal still beats a travel word', () => {
+    expect(
+      classifyWorkflow('investigate 0xe7C8e60a40436c3ab3875fbdB9b5a26D9518ECc3 flight data').workflow,
+    ).toBe('onchain');
+    expect(classifyWorkflow('is this airline hiring on linkedin?').workflow).toBe('competitor');
+  });
 });

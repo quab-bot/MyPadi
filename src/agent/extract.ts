@@ -68,6 +68,57 @@ export function extractEvidence(source: string, body: string, limit = 10): Evide
   return out;
 }
 
+// --- Workflow D: flight search evidence ------------------------------------
+
+const PRICE_KEYS = ['price', 'totalPrice', 'total', 'fare', 'amount', 'cost'];
+const AIRLINE_KEYS = ['airline', 'airlines', 'carrier', 'carriers', 'operator', 'name'];
+const DURATION_KEYS = ['duration', 'totalDuration', 'flightDuration', 'travelTime'];
+
+function anyField(obj: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+    if (typeof v === 'number') return String(v);
+    if (Array.isArray(v) && v.length && typeof v[0] === 'string') return v.join(', ');
+  }
+  return undefined;
+}
+
+/**
+ * Evidence from a flights.search response. The response shape is not pinned live yet, so this walks
+ * the JSON for the result array and renders each itinerary as a compact line (airline, price, stops,
+ * duration) when those fields are present, falling back to a truncated raw rendering. Never throws.
+ */
+export function extractFlightEvidence(source: string, body: string, limit = 8): Evidence[] {
+  const root = parseBody(body);
+  if (root === undefined) {
+    const text = body.trim();
+    return text ? [{ source, excerpt: text.slice(0, 800) }] : [];
+  }
+  const arr = findResultArray(root);
+  const items = arr.length ? arr : [root];
+  const out: Evidence[] = [];
+  for (const item of items.slice(0, limit)) {
+    if (!item || typeof item !== 'object') continue;
+    const obj = item as Record<string, unknown>;
+    const parts: string[] = [];
+    const airline = anyField(obj, AIRLINE_KEYS);
+    const price = anyField(obj, PRICE_KEYS);
+    const duration = anyField(obj, DURATION_KEYS);
+    const stops = typeof obj.stops === 'number' ? `${obj.stops} stop(s)` : undefined;
+    if (airline) parts.push(airline);
+    if (price) parts.push(`price ${price}`);
+    if (stops) parts.push(stops);
+    if (duration) parts.push(duration);
+    const excerpt = parts.length ? parts.join(', ') : JSON.stringify(obj).slice(0, 300);
+    const ev: Evidence = { source, excerpt };
+    const url = firstString(obj, URL_KEYS);
+    if (url) ev.url = url;
+    out.push(ev);
+  }
+  return out.length ? out : extractChainEvidence(source, body);
+}
+
 // --- Workflow C: on-chain evidence (SQD + Chainstack JSON-RPC) --------------
 
 const DATASET_KEYS = ['dataset', 'name', 'id', 'slug', 'alias'];

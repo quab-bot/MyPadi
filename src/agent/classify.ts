@@ -7,7 +7,7 @@
  * paid path. The coordinator validates and budgets every step regardless of this choice.
  */
 
-export type Workflow = 'chat' | 'intel' | 'onchain' | 'competitor';
+export type Workflow = 'chat' | 'intel' | 'onchain' | 'competitor' | 'travel';
 
 /** Meta / small-talk the bot should answer directly (free), never a paid research run. */
 const META_RE = /\b(who\s+(are|r)\s+(you|u)|who\s+be\s+you|what\s+(are|r)\s+(you|u)|what\s+can\s+you\s+do|what\s+do\s+you\s+do|how\s+do\s+you\s+work|what\s+is\s+mypadi|wetin\s+you\s+fit\s+do)\b/;
@@ -60,6 +60,25 @@ const COMPETITOR_PHRASES = [
   'employees at',
 ];
 
+/** Phrases that mean the user wants a flight / travel search (Workflow D). */
+const TRAVEL_PHRASES = [
+  'flight',
+  'flights',
+  'airfare',
+  'fly to',
+  'fly from',
+  'flying to',
+  'flying from',
+  'plane ticket',
+  'plane tickets',
+  'round trip',
+  'round-trip',
+  'one way flight',
+  'one-way flight',
+  'book a trip',
+  'cheapest flight',
+];
+
 export interface Classification {
   workflow: Workflow;
   /** EVM addresses found in the prompt (deduped, lowercased). */
@@ -82,6 +101,7 @@ export function classifyWorkflow(prompt: string): Classification {
   const hasConcrete = ADDRESS_RE.test(prompt) || TX_HASH_RE.test(prompt);
   const onchain = hasConcrete || ONCHAIN_PHRASES.some((k) => p.includes(k));
   const competitor = COMPETITOR_PHRASES.some((k) => p.includes(k));
+  const travel = TRAVEL_PHRASES.some((k) => p.includes(k));
 
   // Small talk / meta: answer directly and free. A greeting only counts when the whole message is
   // short (<= 6 words) and carries no concrete research target, so "hello, investigate 0x..." still
@@ -91,15 +111,17 @@ export function classifyWorkflow(prompt: string): Classification {
   const isChat =
     !hasConcrete && (META_RE.test(p) || (GREETING_RE.test(prompt) && wordCount <= 6));
 
-  // On-chain wins over competitor (a concrete address/hash is the strongest signal); both win over
-  // the default intel report; chat wins over everything when nothing concrete was asked.
+  // Precedence: chat wins when nothing concrete was asked; then on-chain (a concrete address/hash
+  // is the strongest signal), then competitor, then travel; everything else is the intel report.
   const workflow: Workflow = isChat
     ? 'chat'
     : onchain
       ? 'onchain'
       : competitor
         ? 'competitor'
-        : 'intel';
+        : travel
+          ? 'travel'
+          : 'intel';
 
   return { workflow, addresses, hashes };
 }

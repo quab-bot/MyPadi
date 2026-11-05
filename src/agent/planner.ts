@@ -76,6 +76,17 @@ Rules:
   For a 0x tx hash use eth_getTransactionByHash or eth_getTransactionReceipt (params ["0x..."]).
 - Keep it to a few focused calls. Do not invent tools, methods, or fields.`;
 
+const TRAVEL_SYSTEM = `You are MyPadi's planner for flight search. Propose steps using ONLY this tool:
+
+- "flights.search": input { "origin": "<3-letter IATA>", "destination": "<3-letter IATA>", "date": "YYYY-MM-DD", "returnDate"?: "YYYY-MM-DD", "country"?: "<2-letter region, e.g. us, ng, gb>" }
+
+Rules:
+- Return STRICT JSON: {"steps":[{"tool":"flights.search","input":{...}}]}.
+- Convert city or airport names to the correct 3-letter IATA code (e.g. Lagos -> LOS, London -> LHR, New York -> JFK, Accra -> ACC). If a city has several airports, pick the main international one.
+- Resolve relative dates ("next Friday", "in 2 weeks") to an absolute YYYY-MM-DD using the provided current date. Dates MUST be today or later.
+- Include returnDate ONLY if the user asked for a round trip. Set "country" to the traveller's region when it is clear (e.g. a Nigerian user -> "ng"), otherwise omit it.
+- Usually 1 step. Propose a second step only if the user clearly asked about more than one route or date. Do not invent routes the user did not ask for.`;
+
 function extractJson(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const raw = (fenced?.[1] ?? text).trim();
@@ -135,6 +146,18 @@ export class Planner {
       [
         { role: 'system', content: COMPETITOR_SYSTEM },
         { role: 'user', content: prompt },
+      ],
+      { json: true, temperature: 0.2 },
+    );
+    return this.validateAll(content, sandbox);
+  }
+
+  /** Workflow D: flight search. `today` (YYYY-MM-DD) lets the LLM resolve relative dates safely. */
+  async planTravel(prompt: string, today: string, sandbox = true): Promise<PlanResult> {
+    const content = await this.llm.complete(
+      [
+        { role: 'system', content: TRAVEL_SYSTEM },
+        { role: 'user', content: `Current date: ${today}\n\nUser request: ${prompt}` },
       ],
       { json: true, temperature: 0.2 },
     );

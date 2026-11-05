@@ -283,6 +283,29 @@ const linkedinPostSearch: ToolSpec = {
   buildBody: (i) => i,
 };
 
+// --- Workflow D: travel (flights). One-shot paid Google Flights search, sandbox on celo-sepolia. ---
+// Verified live against the catalogue 2026-11-05: $0.023 per_call, inputSchema below.
+
+const flightsSearch: ToolSpec = {
+  id: 'flights.search',
+  title: 'Search flights',
+  method: 'POST',
+  network: 'both',
+  free: false,
+  note: '$0.023 per call. Google Flights, one-way or round-trip. IATA codes + YYYY-MM-DD dates.',
+  schema: z
+    .object({
+      origin: z.string().regex(/^[A-Za-z]{3}$/), // 3-letter origin IATA code
+      destination: z.string().regex(/^[A-Za-z]{3}$/), // 3-letter destination IATA code
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // departure date
+      returnDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // present => round trip
+      country: z.string().regex(/^[A-Za-z]{2}$/).optional(), // 2-letter Google region code
+    })
+    .strict(),
+  url: () => `${GATEWAY_BASE}/v1/travel/flights/search`,
+  buildBody: (i) => i,
+};
+
 // --- Workflow C: free SQD reads + paid Chainstack batch (mainnet only) ---
 
 const sqdDatasets: ToolSpec = {
@@ -371,6 +394,7 @@ export const TOOLS: ToolSpec[] = [
   linkedinProfilePosts,
   linkedinJobSearch,
   linkedinPostSearch,
+  flightsSearch,
   sqdDatasets,
   sqdHead,
   sqdFinalizedHead,
