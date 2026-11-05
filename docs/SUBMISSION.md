@@ -81,6 +81,7 @@ endpoint, price, settlement tx hash and the task each call served.
 ## Repo and links
 - Repo: https://github.com/quab-bot/MyPadi
 - Live site: https://mypadi.185-7-81-139.sslip.io  ·  Telegram bot: https://t.me/mypadi_bot
+- Demo video: https://www.youtube.com/watch?v=l3eyg3YrUSo
 - Loops entry: project `mypadi-04c1a` (`db43a156-8293-5c8e-b38a-53dd34098096`), event `agents-on-open-rails`
 
 ## Users and usage
