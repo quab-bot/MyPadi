@@ -13,6 +13,12 @@ click.
 
 > Talk is cheap. MyPadi brings receipts.
 
+## Demo
+
+[![Watch the MyPadi demo](https://img.youtube.com/vi/l3eyg3YrUSo/hqdefault.jpg)](https://www.youtube.com/watch?v=l3eyg3YrUSo)
+
+Short walkthrough. Click the thumbnail to watch on YouTube.
+
 ---
 
 ## What MyPadi can do
@@ -122,6 +128,23 @@ MyPadi is focused and truthful about its edges. Not shipped: general web browsin
 links, calendar and planning, email, invoicing or payments execution, and sending on-chain
 transactions on your behalf (on-chain is read-only). Documents are text files only (no PDF yet). These
 are on the roadmap, not in the product.
+
+## Roadmap: we keep building
+
+MyPadi is live, and we are not stopping here. For the hackathon the project wallet sponsors all usage
+under strict budgets; after it, we keep building and expanding. Rolling out next:
+
+- **Web browsing:** open links you send, read and navigate sites, and pull out what matters.
+- **Richer documents:** PDFs and images, not just text files.
+- **Travel planning:** hotels and full itineraries on top of flight search.
+- **Watchtower+:** price, release and website-change alerts, not just topics.
+- **Daily briefings and planning:** a lightweight chief-of-staff that organizes your day.
+- **Memory:** MyPadi remembers your projects, preferences and past tasks.
+- **More buy services and models** as the catalogue grows.
+- **Optional user credits:** a top-up tier so power users can fund their own usage, while a free
+  daily allowance stays sponsored.
+
+Have something you want MyPadi to do? Tell us, and we will build it.
 
 ## Stack
 
