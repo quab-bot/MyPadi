@@ -69,6 +69,12 @@ describe('classifyWorkflow', () => {
     expect(classifyWorkflow('is this airline hiring on linkedin?').workflow).toBe('competitor');
   });
 
+  it('routes grants / hackathons / bounties to opportunity discovery', () => {
+    expect(classifyWorkflow('find hackathons I can join this month').workflow).toBe('opportunity');
+    expect(classifyWorkflow('what grants are open for Celo developers?').workflow).toBe('opportunity');
+    expect(classifyWorkflow('any airdrops or bounties worth chasing?').workflow).toBe('opportunity');
+  });
+
   it('routes an uploaded document to the document workflow, even if its text mentions flights/wallets', () => {
     const prompt = buildDocPrompt('trip.txt', 'summarize', 'flights to lagos and wallet 0xabc on celo onchain');
     expect(classifyWorkflow(prompt).workflow).toBe('document');

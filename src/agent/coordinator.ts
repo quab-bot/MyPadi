@@ -97,7 +97,9 @@ export class Coordinator {
             ? await this.gatherCompetitor(task)
             : kind === 'travel'
               ? await this.gatherTravel(task)
-              : await this.gatherIntel(task);
+              : kind === 'opportunity'
+                ? await this.gatherOpportunity(task)
+                : await this.gatherIntel(task);
       const report = await synthesizer.run({ prompt: task.prompt, evidence });
       await repo.saveOutput(
         task.id,
@@ -179,6 +181,19 @@ export class Coordinator {
     const evidence: Evidence[] = [{ source: doc.name, title: doc.name, excerpt: doc.text }];
     const content = await synthesizer.run({ prompt: note, evidence });
     return { content, sources: [{ source: doc.name, title: doc.name }] };
+  }
+
+  /** Workflow C2: opportunity discovery. Same search engine as intel, opportunity-tuned queries. */
+  private async gatherOpportunity(task: TaskRow): Promise<Evidence[]> {
+    const { planner } = this.deps;
+    const evidence: Evidence[] = [];
+    let idx = 0;
+    const plan = await planner.planOpportunity(task.prompt, this.opts.sandbox);
+    for (const step of plan.steps) {
+      const out = await this.executeStep(task, step, idx++);
+      evidence.push(...out.evidence);
+    }
+    return evidence;
   }
 
   /** Workflow D: flight search. One paid flights.search per route, rendered as itinerary evidence. */

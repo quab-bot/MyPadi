@@ -7,7 +7,14 @@
  * paid path. The coordinator validates and budgets every step regardless of this choice.
  */
 
-export type Workflow = 'chat' | 'intel' | 'onchain' | 'competitor' | 'travel' | 'document';
+export type Workflow =
+  | 'chat'
+  | 'intel'
+  | 'onchain'
+  | 'competitor'
+  | 'travel'
+  | 'opportunity'
+  | 'document';
 
 /**
  * Control prefix the Telegram bot prepends when a user uploads a document, so the task prompt
@@ -116,6 +123,31 @@ const TRAVEL_PHRASES = [
   'cheapest flight',
 ];
 
+/** Phrases that mean the user wants opportunity discovery (Workflow C2): grants, hackathons, etc. */
+const OPPORTUNITY_PHRASES = [
+  'hackathon',
+  'hackathons',
+  'grant',
+  'grants',
+  'airdrop',
+  'airdrops',
+  'bounty',
+  'bounties',
+  'accelerator',
+  'incubator',
+  'fellowship',
+  'scholarship',
+  'apply for',
+  'call for',
+  'request for proposal',
+  'rfp',
+  'ecosystem fund',
+  'retroactive funding',
+  'retropgf',
+  'gitcoin',
+  'developer opportunit',
+];
+
 export interface Classification {
   workflow: Workflow;
   /** EVM addresses found in the prompt (deduped, lowercased). */
@@ -145,6 +177,7 @@ export function classifyWorkflow(prompt: string): Classification {
   const onchain = hasConcrete || ONCHAIN_PHRASES.some((k) => p.includes(k));
   const competitor = COMPETITOR_PHRASES.some((k) => p.includes(k));
   const travel = TRAVEL_PHRASES.some((k) => p.includes(k));
+  const opportunity = OPPORTUNITY_PHRASES.some((k) => p.includes(k));
 
   // Small talk / meta: answer directly and free. A greeting only counts when the whole message is
   // short (<= 6 words) and carries no concrete research target, so "hello, investigate 0x..." still
@@ -155,7 +188,8 @@ export function classifyWorkflow(prompt: string): Classification {
     !hasConcrete && (META_RE.test(p) || (GREETING_RE.test(prompt) && wordCount <= 6));
 
   // Precedence: chat wins when nothing concrete was asked; then on-chain (a concrete address/hash
-  // is the strongest signal), then competitor, then travel; everything else is the intel report.
+  // is the strongest signal), then competitor, then travel, then opportunity discovery; everything
+  // else is the default intel report.
   const workflow: Workflow = isChat
     ? 'chat'
     : onchain
@@ -164,7 +198,9 @@ export function classifyWorkflow(prompt: string): Classification {
         ? 'competitor'
         : travel
           ? 'travel'
-          : 'intel';
+          : opportunity
+            ? 'opportunity'
+            : 'intel';
 
   return { workflow, addresses, hashes };
 }

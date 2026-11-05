@@ -81,6 +81,21 @@ Rules:
 - Batch several related reads into ONE chainstack.celo call (its "calls" array) rather than many.
 - Keep it to a few focused calls. Do not invent tools, methods, or fields.`;
 
+const OPPORTUNITY_SYSTEM = `You are MyPadi's planner for finding opportunities: hackathons, grants,
+bounties, airdrops, accelerators, fellowships, and developer programs. Propose search steps using
+ONLY these tools:
+
+- "x.posts.search": input { "query": string, "type"?: "latest"|"top" }
+- "reddit.posts.search": input { "query": string, "sort"?: "new"|"top", "timeRange"?: "month"|"week"|"year" }
+- "youtube.videos.search": input { "query": string }
+
+Rules:
+- Return STRICT JSON: {"steps":[{"tool":"<id>","input":{...}}]}.
+- Build queries that surface CURRENT, OPEN opportunities with deadlines, e.g. "<topic> hackathon 2026 apply",
+  "<ecosystem> grant program open", "<topic> bounty", "<ecosystem> accelerator applications".
+- Prefer recent results: use type "latest" on X and sort "new" with a short timeRange on Reddit.
+- Use 3 to 4 steps across the platforms. Use ONLY the fields listed. Do not invent fields or tools.`;
+
 const TRAVEL_SYSTEM = `You are MyPadi's planner for flight search. Propose steps using ONLY this tool:
 
 - "flights.search": input { "origin": "<3-letter IATA>", "destination": "<3-letter IATA>", "date": "YYYY-MM-DD", "returnDate"?: "YYYY-MM-DD", "country"?: "<2-letter region, e.g. us, ng, gb>" }
@@ -150,6 +165,18 @@ export class Planner {
     const content = await this.llm.complete(
       [
         { role: 'system', content: COMPETITOR_SYSTEM },
+        { role: 'user', content: prompt },
+      ],
+      { json: true, temperature: 0.2 },
+    );
+    return this.validateAll(content, sandbox);
+  }
+
+  /** Workflow C2: opportunity discovery (hackathons/grants/bounties) via the search tools. */
+  async planOpportunity(prompt: string, sandbox = true): Promise<PlanResult> {
+    const content = await this.llm.complete(
+      [
+        { role: 'system', content: OPPORTUNITY_SYSTEM },
         { role: 'user', content: prompt },
       ],
       { json: true, temperature: 0.2 },
