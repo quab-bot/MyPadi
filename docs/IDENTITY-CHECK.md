@@ -40,3 +40,26 @@ the tag shown there, as a second safeguard.
 Deploy state: app live on VPS (mainnet), `agentURI` https://mypadi.185-7-81-139.sslip.io/agent-registration.json
 reachable (HTTP 200, valid TLS), Phase-2 preflight all green. Registration simulate: would mint agentId 10036.
 Awaiting developer visual confirmation of the tag in the Loops playground popup + explicit go-ahead before sending.
+
+---
+
+## 2026-11-05 ~10:40 UTC — redeploy (new capabilities) + on-chain registration verification
+
+Redeployed the live mainnet agent with the new features (travel, opportunity, documents, deeper
+on-chain, Watchtower, /proof, landing page). Checks:
+
+| Check | Expected | Observed | Result |
+|---|---|---|---|
+| App startup assert (tag + no CeloDesk ids + wallet==key) | pass | "Identity OK. Tag celo_c42607f62b5b. Mode: MAINNET." | PASS |
+| `TAG` in identity.ts | celo_c42607f62b5b | celo_c42607f62b5b | PASS |
+| CeloDesk identifiers in operational config/code | none | none (only the guard/docs/tests) | PASS |
+| /health tag + mode | celo_c42607f62b5b / mainnet | same | PASS |
+| agentURI wallet | 0xe7C8e60a40436c3ab3875fbdB9b5a26D9518ECc3 | same | PASS |
+
+On-chain registration verified via read-only eth_call to the Identity Registry
+`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` (Celo mainnet, forno):
+- `ownerOf(10036)` = `0xe7c8e60a40436c3ab3875fbdb9b5a26d9518ecc3` (== AGENT_WALLET). agentId 10036 is ours.
+- `tokenURI(10036)` ends `...sslip.io/agent-registration.json` (== agentURI).
+
+Still pending before the next `loops project update` / submit: developer to confirm the Loops-entry
+rows (auth email `quabentertainment@gmail.com`, tag, wallet, repo) per 2.4.
