@@ -72,21 +72,22 @@ budget held and are resolved with `buy receipts --resolve`, never silently retri
 See `docs/PROOF.md` (generated from the `service_calls` table by `npm run proof`): date, service,
 endpoint, price, settlement tx hash and the task each call served.
 
-## Agent identity
-- Agent wallet: **{{agentWallet}}**
-- ERC-8004 agent id: **{{agentId}}** on the Identity Registry `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` (Celo mainnet)
-- Registration tx (tagged `celo_c42607f62b5b`): **{{firstTaggedTxHash}}**
-- agentURI: **{{publicBaseUrl}}/agent-registration.json**
+## Agent identity (verified on-chain 2026-11-05)
+- Agent wallet: **0xe7C8e60a40436c3ab3875fbdB9b5a26D9518ECc3**
+- ERC-8004 agent id: **10036** on the Identity Registry `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` (Celo mainnet). `ownerOf(10036)` returns the agent wallet; `tokenURI(10036)` returns the agentURI below.
+- Registration tx (tagged `celo_c42607f62b5b`, verified with `npm run verify-tag`): **0x506cf0e7d8812534e7f9ecdf8f4969e5fd8ce25b5ccae287be35dac8f0d8d09b**
+- agentURI: **https://mypadi.185-7-81-139.sslip.io/agent-registration.json**
 
 ## Repo and links
 - Repo: https://github.com/quab-bot/MyPadi
-- Loops entry: **{{loopsProjectUrl}}**
-- Demo: **{{demoLink}}** (Telegram bot + a recorded run)
+- Live site: https://mypadi.185-7-81-139.sslip.io  ·  Telegram bot: https://t.me/mypadi_bot
+- Loops entry: project `mypadi-04c1a` (`db43a156-8293-5c8e-b38a-53dd34098096`), event `agents-on-open-rails`
 
 ## Users and usage
-- Independent users (Telegram): **{{userCount}}**
-- Tasks completed: **{{taskCount}}**
-- Total paid to services via buy: **{{totalPaid}}**
+Live figures come from the database on the VPS; regenerate with `npm run proof` (see `docs/PROOF.md`).
+Early mainnet usage already shows real settlements across several workflows (see `/proof` in the bot
+and the PROOF table): intel (X / Reddit / YouTube + transcripts), on-chain (Chainstack batches),
+and more, each a real USDC settlement on Celo mainnet.
 
 ---
 
