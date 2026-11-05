@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyWorkflow } from './classify.js';
+import { classifyWorkflow, buildDocPrompt, parseDocPrompt } from './classify.js';
 
 describe('classifyWorkflow', () => {
   it('routes plain research prompts to intel', () => {
@@ -67,5 +67,20 @@ describe('classifyWorkflow', () => {
       classifyWorkflow('investigate 0xe7C8e60a40436c3ab3875fbdB9b5a26D9518ECc3 flight data').workflow,
     ).toBe('onchain');
     expect(classifyWorkflow('is this airline hiring on linkedin?').workflow).toBe('competitor');
+  });
+
+  it('routes an uploaded document to the document workflow, even if its text mentions flights/wallets', () => {
+    const prompt = buildDocPrompt('trip.txt', 'summarize', 'flights to lagos and wallet 0xabc on celo onchain');
+    expect(classifyWorkflow(prompt).workflow).toBe('document');
+  });
+
+  it('buildDocPrompt / parseDocPrompt round-trips name, note and text', () => {
+    const prompt = buildDocPrompt('report.md', 'what are the risks?', 'line one\nline two');
+    const doc = parseDocPrompt(prompt);
+    expect(doc).toBeDefined();
+    expect(doc!.name).toBe('report.md');
+    expect(doc!.note).toBe('what are the risks?');
+    expect(doc!.text).toBe('line one\nline two');
+    expect(parseDocPrompt('not a doc prompt')).toBeUndefined();
   });
 });

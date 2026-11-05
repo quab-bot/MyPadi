@@ -23,7 +23,7 @@ import {
   decodeChainBatch,
   extractDatasetNames,
 } from './extract.js';
-import { classifyWorkflow } from './classify.js';
+import { classifyWorkflow, parseDocPrompt } from './classify.js';
 
 export interface CoordinatorDeps {
   repo: TaskRepo;
@@ -82,6 +82,13 @@ export class Coordinator {
         await repo.saveOutput(task.id, reply, []);
         await repo.setTaskStatus(task.id, 'done');
         return reply;
+      }
+      // Uploaded document: summarize the provided text directly (free, no buy calls).
+      if (kind === 'document') {
+        const report = await this.summarizeDocument(task);
+        await repo.saveOutput(task.id, report.content, report.sources);
+        await repo.setTaskStatus(task.id, 'done');
+        return report.content;
       }
       const evidence =
         kind === 'onchain'
@@ -150,6 +157,28 @@ export class Coordinator {
       evidence.push(...out.evidence);
     }
     return evidence;
+  }
+
+  /**
+   * Workflow E: summarize an uploaded document. The text travels in the task prompt behind a control
+   * prefix (see classify.ts), so there is no DB change and no paid call: the LLM summarizes the text
+   * directly and cites the file as the source. Text is already capped by the bot before it gets here.
+   */
+  private async summarizeDocument(
+    task: TaskRow,
+  ): Promise<{ content: string; sources: Array<{ source: string; title?: string }> }> {
+    const { synthesizer } = this.deps;
+    const doc = parseDocPrompt(task.prompt);
+    if (!doc || !doc.text.trim()) {
+      return {
+        content: "I could not read any text from that document. If it is a PDF or image, send a text file (txt, md, csv, json) for now, or paste the text.",
+        sources: [],
+      };
+    }
+    const note = doc.note.trim() || 'Summarize this document and pull out the key points and any important details.';
+    const evidence: Evidence[] = [{ source: doc.name, title: doc.name, excerpt: doc.text }];
+    const content = await synthesizer.run({ prompt: note, evidence });
+    return { content, sources: [{ source: doc.name, title: doc.name }] };
   }
 
   /** Workflow D: flight search. One paid flights.search per route, rendered as itinerary evidence. */

@@ -245,6 +245,30 @@ export function decodeChainBatch(calls: ChainCall[], body: string, source: strin
         lines.push(`logs${addr}: ${Array.isArray(res) ? `${res.length} event log(s)` : '0'}`);
         break;
       }
+      case 'eth_call': {
+        if (typeof res === 'string' && /^0x[0-9a-fA-F]*$/.test(res)) {
+          if (res === '0x' || res === '0x0') {
+            lines.push('contract read (eth_call): empty / 0');
+          } else {
+            const b = hexToBig(res);
+            // A single 32-byte word (66 chars incl 0x) is usually a uint256 (balance, supply, etc.).
+            const dec = b !== undefined && res.length <= 66 ? ` (= ${b.toString()})` : '';
+            lines.push(`contract read (eth_call): ${res}${dec}`);
+          }
+        } else {
+          lines.push(`contract read (eth_call): ${typeof res === 'object' ? JSON.stringify(res).slice(0, 120) : String(res)}`);
+        }
+        break;
+      }
+      case 'eth_maxPriorityFeePerGas': {
+        const b = hexToBig(res);
+        lines.push(`max priority fee: ${b !== undefined ? `${(Number(b) / 1e9).toFixed(3)} gwei` : String(res)}`);
+        break;
+      }
+      case 'eth_feeHistory': {
+        lines.push(`fee history: ${res && typeof res === 'object' ? JSON.stringify(res).slice(0, 140) : String(res)}`);
+        break;
+      }
       case 'eth_getBlockByNumber':
       case 'eth_getBlockByHash': {
         if (res && typeof res === 'object') {

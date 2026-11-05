@@ -65,15 +65,20 @@ steps using ONLY these tools:
 - "sqd.finalized-head": input { "dataset": string }             latest finalized block
 - "sqd.block-at-timestamp": input { "dataset": string, "timestamp": <unix seconds> }
 - "chainstack.celo": input { "calls": [ { "jsonrpc":"2.0", "id":1, "method":"<read method>", "params":[...] } ] }
-  Allowed methods ONLY: eth_blockNumber, eth_chainId, eth_gasPrice, eth_getBalance, eth_getCode,
-  eth_getTransactionCount, eth_getBlockByNumber, eth_getBlockByHash, eth_getTransactionByHash,
-  eth_getTransactionReceipt, eth_getLogs, eth_call.
+  Allowed methods ONLY: eth_blockNumber, eth_chainId, eth_gasPrice, eth_maxPriorityFeePerGas,
+  eth_feeHistory, eth_getBalance, eth_getCode, eth_getTransactionCount, eth_getBlockByNumber,
+  eth_getBlockByHash, eth_getTransactionByHash, eth_getTransactionReceipt, eth_getLogs, eth_call.
 
 Rules:
 - Return STRICT JSON: {"steps":[{"tool":"<id>","input":{...}}]}.
 - Use ONLY dataset names from the provided list. If none clearly match Celo, omit SQD steps.
 - For a 0x address use eth_getBalance / eth_getTransactionCount (params like ["0x...","latest"]).
   For a 0x tx hash use eth_getTransactionByHash or eth_getTransactionReceipt (params ["0x..."]).
+- For a native CELO balance use eth_getBalance. For an ERC-20 token balance use eth_call with
+  params [{"to":"<token contract 0x>","data":"0x70a08231<holder address, no 0x, left-padded to 64 hex>"},"latest"].
+  For a token's total supply use eth_call with data "0x18160ddd". Only use eth_call when you have a
+  concrete contract address and know the selector.
+- Batch several related reads into ONE chainstack.celo call (its "calls" array) rather than many.
 - Keep it to a few focused calls. Do not invent tools, methods, or fields.`;
 
 const TRAVEL_SYSTEM = `You are MyPadi's planner for flight search. Propose steps using ONLY this tool:

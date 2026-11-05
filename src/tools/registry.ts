@@ -46,6 +46,8 @@ export const CHAINSTACK_READ_METHODS = new Set([
   'eth_getLogs',
   'eth_getTransactionByHash',
   'eth_getTransactionReceipt',
+  'eth_feeHistory',
+  'eth_maxPriorityFeePerGas',
 ]);
 
 // --- Workflow A: social search + transcript ---

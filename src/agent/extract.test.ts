@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { extractDatasetNames, extractChainEvidence, extractEvidence } from './extract.js';
+import {
+  extractDatasetNames,
+  extractChainEvidence,
+  extractEvidence,
+  extractFlightEvidence,
+  decodeChainBatch,
+} from './extract.js';
 
 describe('extractDatasetNames', () => {
   it('pulls dataset ids from an array of objects', () => {
@@ -51,5 +57,41 @@ describe('extractEvidence still works for social bodies', () => {
     const ev = extractEvidence('X', body);
     expect(ev[0]!.excerpt).toBe('hello celo');
     expect(ev[0]!.url).toBe('https://x.com/1');
+  });
+});
+
+describe('decodeChainBatch decodes eth_call (Workflow F depth)', () => {
+  it('renders a uint256 word as its decimal value', () => {
+    // 0x...03e8 = 1000
+    const res = '0x' + (1000).toString(16).padStart(64, '0');
+    const body = JSON.stringify([{ id: 1, result: res }]);
+    const ev = decodeChainBatch([{ id: 1, method: 'eth_call' }], body, 'Celo RPC');
+    expect(ev[0]!.excerpt).toContain('contract read (eth_call)');
+    expect(ev[0]!.excerpt).toContain('= 1000');
+  });
+
+  it('labels an empty eth_call result', () => {
+    const body = JSON.stringify([{ id: 1, result: '0x' }]);
+    const ev = decodeChainBatch([{ id: 1, method: 'eth_call' }], body, 'Celo RPC');
+    expect(ev[0]!.excerpt).toContain('empty');
+  });
+});
+
+describe('extractFlightEvidence (Workflow D)', () => {
+  it('renders itineraries compactly from a results array', () => {
+    const body = JSON.stringify({
+      flights: [
+        { airline: 'Kenya Airways', price: '$512', stops: 1, duration: '9h 40m', url: 'https://x/1' },
+      ],
+    });
+    const ev = extractFlightEvidence('Flights', body);
+    expect(ev[0]!.source).toBe('Flights');
+    expect(ev[0]!.excerpt).toContain('Kenya Airways');
+    expect(ev[0]!.excerpt).toContain('512');
+    expect(ev[0]!.url).toBe('https://x/1');
+  });
+
+  it('never throws on an unexpected shape', () => {
+    expect(() => extractFlightEvidence('Flights', 'not json')).not.toThrow();
   });
 });

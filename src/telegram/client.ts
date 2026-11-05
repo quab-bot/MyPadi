@@ -12,11 +12,20 @@ export interface TgUser {
   is_bot?: boolean;
 }
 
+export interface TgDocument {
+  file_id: string;
+  file_name?: string;
+  mime_type?: string;
+  file_size?: number;
+}
+
 export interface TgMessage {
   message_id: number;
   from?: TgUser;
   chat: { id: number; type: string };
   text?: string;
+  caption?: string;
+  document?: TgDocument;
 }
 
 export interface TgUpdate {
@@ -26,10 +35,12 @@ export interface TgUpdate {
 
 export class TelegramClient {
   private readonly base: string;
+  private readonly fileBase: string;
 
   constructor(token: string) {
     if (!token) throw new Error('TELEGRAM_BOT_TOKEN is required.');
     this.base = `https://api.telegram.org/bot${token}`;
+    this.fileBase = `https://api.telegram.org/file/bot${token}`;
   }
 
   async getMe(): Promise<TgUser> {
@@ -42,6 +53,19 @@ export class TelegramClient {
       timeout: timeoutSec,
       allowed_updates: ['message'],
     });
+  }
+
+  /** Resolve a file_id to a downloadable file_path on Telegram's servers. */
+  async getFile(fileId: string): Promise<{ file_path?: string }> {
+    return this.call<{ file_path?: string }>('getFile', { file_id: fileId });
+  }
+
+  /** Download a resolved file and return its bytes decoded as UTF-8 text (capped at maxBytes). */
+  async downloadFileText(filePath: string, maxBytes = 2_000_000): Promise<string> {
+    const res = await fetch(`${this.fileBase}/${filePath}`);
+    if (!res.ok) throw new Error(`Telegram file download failed: ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    return buf.subarray(0, maxBytes).toString('utf8');
   }
 
   async sendMessage(

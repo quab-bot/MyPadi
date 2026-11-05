@@ -7,7 +7,44 @@
  * paid path. The coordinator validates and budgets every step regardless of this choice.
  */
 
-export type Workflow = 'chat' | 'intel' | 'onchain' | 'competitor' | 'travel';
+export type Workflow = 'chat' | 'intel' | 'onchain' | 'competitor' | 'travel' | 'document';
+
+/**
+ * Control prefix the Telegram bot prepends when a user uploads a document, so the task prompt
+ * carries the file without a DB schema change. Format: DOC_PREFIX + JSON header line + "\n" + text.
+ * classifyWorkflow routes any such prompt to the 'document' workflow before any other rule.
+ */
+export const DOC_PREFIX = '\u0001MYPADI_DOC\u0001';
+
+export interface DocPayload {
+  name: string;
+  note: string;
+  text: string;
+}
+
+/** Parse a document-upload prompt back into its parts, or undefined if it is not one. */
+export function parseDocPrompt(prompt: string): DocPayload | undefined {
+  if (!prompt.startsWith(DOC_PREFIX)) return undefined;
+  const rest = prompt.slice(DOC_PREFIX.length);
+  const nl = rest.indexOf('\n');
+  const headerStr = nl === -1 ? rest : rest.slice(0, nl);
+  const text = nl === -1 ? '' : rest.slice(nl + 1);
+  try {
+    const h = JSON.parse(headerStr) as { name?: unknown; note?: unknown };
+    return {
+      name: typeof h.name === 'string' && h.name ? h.name : 'document',
+      note: typeof h.note === 'string' ? h.note : '',
+      text,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/** Build a document-upload prompt from its parts (used by the Telegram bot). */
+export function buildDocPrompt(name: string, note: string, text: string): string {
+  return `${DOC_PREFIX}${JSON.stringify({ name, note })}\n${text}`;
+}
 
 /** Meta / small-talk the bot should answer directly (free), never a paid research run. */
 const META_RE = /\b(who\s+(are|r)\s+(you|u)|who\s+be\s+you|what\s+(are|r)\s+(you|u)|what\s+can\s+you\s+do|what\s+do\s+you\s+do|how\s+do\s+you\s+work|what\s+is\s+mypadi|wetin\s+you\s+fit\s+do)\b/;
@@ -88,6 +125,12 @@ export interface Classification {
 }
 
 export function classifyWorkflow(prompt: string): Classification {
+  // A document upload is encoded with a control prefix; route it before any text heuristic so the
+  // file's contents can never accidentally trip the on-chain / travel / competitor keyword rules.
+  if (prompt.startsWith(DOC_PREFIX)) {
+    return { workflow: 'document', addresses: [], hashes: [] };
+  }
+
   const p = prompt.toLowerCase();
 
   const hashes = Array.from(new Set((prompt.match(/\b0x[0-9a-fA-F]{64}\b/g) ?? []).map((h) => h.toLowerCase())));
