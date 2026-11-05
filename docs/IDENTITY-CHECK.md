@@ -63,3 +63,23 @@ On-chain registration verified via read-only eth_call to the Identity Registry
 
 Still pending before the next `loops project update` / submit: developer to confirm the Loops-entry
 rows (auth email `quabentertainment@gmail.com`, tag, wallet, repo) per 2.4.
+
+---
+
+## 2026-11-05 ~11:00 UTC — final 2.4 check + submission (loops project update --confirm)
+
+All rows read from the live Loops entry via `loops project get` / `loops auth status` (CLI, same
+account that owns the entry). Developer approved the update; `--confirm` run only after that yes.
+
+| Check | Expected | Observed | Result |
+|---|---|---|---|
+| `loops auth status` email | quabentertainment@gmail.com | quabentertainment@gmail.com | PASS |
+| Loops entry attributionTag | celo_c42607f62b5b | celo_c42607f62b5b | PASS |
+| Loops entry agentWallet | 0xe7C8e60a40436c3ab3875fbdB9b5a26D9518ECc3 | same | PASS |
+| Loops entry repoUrl | https://github.com/quab-bot/MyPadi | same | PASS |
+| Loops entry firstTaggedTx | 0x506cf0e7...d8d09b | same (matches verify-tag PASS) | PASS |
+| Any CeloDesk identifier | none | none | PASS |
+
+Submission state after `loops project update --confirm` (description refreshed to full capabilities,
+demoUrl https://mypadi.185-7-81-139.sslip.io, screenshot + logo uploaded): `missing: []`,
+`celoTag: celo_c42607f62b5b`. Everything the event asks for is in. MyPadi is submitted.
