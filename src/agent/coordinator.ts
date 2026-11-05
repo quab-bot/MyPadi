@@ -59,6 +59,21 @@ function labelFor(toolId: string): string {
   return SOURCE_LABEL[toolId] ?? toolId;
 }
 
+/** Per-workflow synthesis guidance so each report is shaped for its job. */
+const SYNTH_GUIDANCE: Partial<Record<string, string>> = {
+  opportunity:
+    'These are OPPORTUNITIES (hackathons, grants, bounties, airdrops, programs). For EACH distinct ' +
+    'opportunity in the evidence give: its name; one line on what it is; the DEADLINE (or "deadline ' +
+    'not stated"); who is eligible; the prize, funding or reward amount if stated; and how to apply ' +
+    'with the link from the evidence. Put the soonest deadlines first. If one looks closed or past, ' +
+    'say so. Never invent deadlines, amounts, or links. If the evidence is thin, say what is missing ' +
+    'and where to look next.',
+  travel:
+    'These are FLIGHT options. List the best ones from the evidence with airline, price, number of ' +
+    'stops, and total duration. Put the cheapest first and note the fastest. If prices or times are ' +
+    'missing, say so plainly. Never invent fares, airlines, or times.',
+};
+
 interface StepOutcome {
   body?: string;
   evidence: Evidence[];
@@ -100,7 +115,7 @@ export class Coordinator {
               : kind === 'opportunity'
                 ? await this.gatherOpportunity(task)
                 : await this.gatherIntel(task);
-      const report = await synthesizer.run({ prompt: task.prompt, evidence });
+      const report = await synthesizer.run({ prompt: task.prompt, evidence, guidance: SYNTH_GUIDANCE[kind] });
       await repo.saveOutput(
         task.id,
         report,

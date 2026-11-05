@@ -38,15 +38,19 @@ never call a block number a balance). If the evidence is thin or conflicting, sa
 const CHAT_SYSTEM = `${MYPADI_VOICE}
 
 This is a casual message, not a research job, so DO NOT pretend to have searched anything. Reply in
-1 to 3 short sentences as a friendly padi. If they greet you, greet back warm and add one line on
-what you can do. If they ask what you can do, tell them briefly: you research a topic across social
-media (X, Reddit, YouTube, Instagram, TikTok) and pull transcripts, dig into Celo on-chain activity,
-and do competitor or jobs research on LinkedIn, and you pay for the data yourself so they never touch
-a wallet. Give one tiny example they could try. Keep it short. Plain text, no markdown, no em dashes.`;
+1 to 3 short sentences. If they greet you, greet back warmly and add one line on what you can do. If
+they ask what you can do, tell them briefly: you research any topic across social media (X, Reddit,
+YouTube, Instagram, TikTok) and pull video transcripts; investigate Celo on-chain activity (wallets,
+transactions, token balances); do competitor and jobs research on LinkedIn; find opportunities like
+hackathons, grants and bounties; search flights; and summarize documents they send you. You pay for
+the data yourself so they never touch a wallet. Give one tiny example they could try. Keep it short.
+Plain text, no markdown, no em dashes.`;
 
 export interface SynthesisInput {
   prompt: string;
   evidence: Evidence[];
+  /** Optional per-workflow instruction appended to the system prompt (e.g. how to format flights). */
+  guidance?: string;
   /** Keep the evidence block under this many characters (default ~ 6k tokens). */
   maxEvidenceChars?: number;
 }
@@ -80,9 +84,10 @@ export class Synthesizer {
     }
     const { block } = buildEvidenceBlock(input.evidence, maxChars);
     const user = `User request: ${input.prompt}\n\nEvidence:\n${block}`;
+    const system = input.guidance ? `${SYNTH_SYSTEM}\n\nFor THIS task specifically:\n${input.guidance}` : SYNTH_SYSTEM;
     const content = await this.llm.complete(
       [
-        { role: 'system', content: SYNTH_SYSTEM },
+        { role: 'system', content: system },
         { role: 'user', content: user },
       ],
       { temperature: 0.4, maxTokens: 1200 },
