@@ -19,9 +19,9 @@
   "erc8004": {
     "registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
     "chain": "celo",
-    "agentId": "(set after registration)",
-    "agentURI": "http://localhost:3100/agent-registration.json"
+    "agentId": "10036",
+    "agentURI": "https://mypadi.185-7-81-139.sslip.io/agent-registration.json"
   },
-  "registrationFile": "http://localhost:3100/agent-registration.json",
-  "generated": "2026-11-05"
+  "registrationFile": "https://mypadi.185-7-81-139.sslip.io/agent-registration.json",
+  "generated": "2026-11-06"
 }

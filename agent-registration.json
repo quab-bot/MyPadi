@@ -10,13 +10,13 @@
     "Watchtower: standing watches that re-check a topic on a schedule and alert on new results",
     "Competitor and jobs research on LinkedIn"
   ],
-  "image": "http://localhost:3100/icon.png",
-  "url": "http://localhost:3100",
+  "image": "https://mypadi.185-7-81-139.sslip.io/icon.png",
+  "url": "https://mypadi.185-7-81-139.sslip.io",
   "active": true,
   "x402Support": true,
   "agent": {
     "wallet": "0xe7C8e60a40436c3ab3875fbdB9b5a26D9518ECc3",
-    "agentId": "",
+    "agentId": "10036",
     "registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
     "chain": "celo"
   },
@@ -24,17 +24,17 @@
     {
       "type": "telegram-bot",
       "description": "Primary user interface. Users send tasks in natural language.",
-      "endpoint": "https://t.me/"
+      "endpoint": "https://t.me/mypadi_bot"
     },
     {
       "type": "http-api",
       "description": "Health and registration endpoints.",
-      "endpoint": "http://localhost:3100/health"
+      "endpoint": "https://mypadi.185-7-81-139.sslip.io/health"
     }
   ],
   "endpoints": {
-    "registration": "http://localhost:3100/agent-registration.json",
-    "health": "http://localhost:3100/health"
+    "registration": "https://mypadi.185-7-81-139.sslip.io/agent-registration.json",
+    "health": "https://mypadi.185-7-81-139.sslip.io/health"
   },
   "attribution": {
     "tag": "celo_c42607f62b5b",
