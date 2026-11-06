@@ -138,7 +138,7 @@ async function handleProofCommand(
   });
   await client.sendMessage(
     chatId,
-    `Here is what I have paid for recently (your last ${calls.length} calls, $${usdFromMicro(total)} total). Every line is a real x402 settlement on Celo:\n\n${lines.join('\n')}`,
+    `Here is what I have paid for recently (your last ${calls.length} calls, $${usdFromMicro(total)} total). Each line is a real x402 payment; the network it settled on is shown on the line:\n\n${lines.join('\n')}`,
   );
 }
 

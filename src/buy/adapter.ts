@@ -165,20 +165,68 @@ export class BuyAdapter {
   }
 
   /**
-   * Best-effort settlement tx hash for the most recent payment, for proof-of-payment evidence.
-   * Scans `buy receipts --limit 1` output for a 0x…64-hex hash. The exact receipt JSON shape is
-   * pinned during the live sandbox run; until then this regex is a safe fallback.
+   * Settlement tx hash of the MOST RECENT payment, for proof-of-payment evidence. Called right
+   * after a successful `pay()` in a single-threaded worker, so `--limit 1` is this call's receipt
+   * in normal operation. The receipt is requested with `--json` (see globalFlags), so we extract
+   * the hash from the parsed JSON, preferring a hash-named field so we never mistake a 32-byte
+   * authorization nonce for the tx hash. Falls back to a raw 0x…64-hex scan if the output is not
+   * JSON. TODO(live): capture one `buy --json receipts --limit 1` sample on mainnet and pin the
+   * exact field path here.
    */
   async latestReceiptTxHash(): Promise<string | undefined> {
     const argv = [...this.globalFlags({ account: true }), 'receipts', '--limit', '1'];
     try {
       const res = await this.cfg.runner(argv);
-      const m = res.stdout.match(/0x[0-9a-fA-F]{64}/);
-      return m ? m[0] : undefined;
+      return extractReceiptTxHash(res.stdout);
     } catch {
       return undefined;
     }
   }
+}
+
+/** A 32-byte hex value (tx hash, block hash, or an EIP-3009 nonce all share this shape). */
+const HEX32 = /^0x[0-9a-fA-F]{64}$/;
+/** Key names that denote a settlement tx hash (never a nonce/authorization). */
+const TX_HASH_KEY = /(tx|transaction|settlement).*hash|hash.*(tx|transaction)|txhash|txid/i;
+
+/**
+ * Pull the settlement tx hash out of a `buy receipts` payload. Prefers a value under a hash-named
+ * key (so a `nonce`/`authorization` field is not picked up); if the output is not JSON, falls back
+ * to the first 0x…64-hex token in the text. Exported for unit testing.
+ */
+export function extractReceiptTxHash(stdout: string): string | undefined {
+  const text = stdout.trim();
+  if (text) {
+    try {
+      const keyed = findHashByKey(JSON.parse(text));
+      if (keyed) return keyed;
+    } catch {
+      // not JSON: fall through to the raw scan below
+    }
+  }
+  const m = text.match(/0x[0-9a-fA-F]{64}/);
+  return m ? m[0] : undefined;
+}
+
+/** Depth-first search for a 32-byte hex value stored under a tx-hash-named key. */
+function findHashByKey(node: unknown): string | undefined {
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const found = findHashByKey(item);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  if (node && typeof node === 'object') {
+    for (const [k, v] of Object.entries(node)) {
+      if (typeof v === 'string' && TX_HASH_KEY.test(k) && HEX32.test(v)) return v;
+    }
+    for (const v of Object.values(node)) {
+      const found = findHashByKey(v);
+      if (found) return found;
+    }
+  }
+  return undefined;
 }
 
 /** Parse the `--json` stderr error envelope: {"error":{"code":...,"message":...}}. */

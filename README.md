@@ -100,17 +100,20 @@ ledger with a failure reserve, a per-user cap and a per-task cap.
 
 ## Paid services it uses (via buy)
 
-Real x402 calls from the MyPadi wallet into services it does not own:
+Real x402 calls from the MyPadi wallet into services it does not own. The `Status` column is honest
+about which have real paid settlements on record (see [`docs/PROOF.md`](docs/PROOF.md)) and which are
+wired and callable but not yet exercised with a paid call.
 
-| Service | Used for | Price |
-|---|---|---|
-| `x.posts.search`, `reddit.posts.search`, `youtube.videos.search` | social and discussion signal | ~$0.005/call |
-| Instagram and TikTok search (apify) | visual and short-video coverage | bundle |
-| YouTube transcript (`…starvibe-youtube-video-transcript`) | quotable video text | $0.013/video |
-| `flights.search` | Google Flights itineraries | $0.023/call |
-| `chainstack.celo` | Celo JSON-RPC batch reads | $0.01/batch |
-| LinkedIn company / profile / job / post search | competitor and jobs research | bundle |
-| SQD portal | free chain lookups | free |
+| Service | Used for | Price | Status |
+|---|---|---|---|
+| `x.posts.search`, `reddit.posts.search`, `youtube.videos.search` | social and discussion signal | ~$0.005/call | settled |
+| YouTube transcript (`…starvibe-youtube-video-transcript`) | quotable video text | $0.013/video | settled |
+| TikTok search (`…apidojo-tiktok-scraper`) | short-video coverage | bundle | settled |
+| `chainstack.celo` | Celo JSON-RPC batch reads | $0.01/batch | settled |
+| SQD portal | free chain lookups | free | free |
+| Instagram search (apify) | visual coverage | bundle | wired, not yet exercised |
+| `flights.search` | Google Flights itineraries | $0.023/call | wired, not yet exercised |
+| LinkedIn company / profile / job / post search | competitor and jobs research | bundle | wired, not yet exercised |
 
 ## Identity and proof of payment
 
@@ -119,8 +122,10 @@ Registered on the Celo ERC-8004 Identity Registry (`0x8004A169FB4a3325136EB29fA0
 registration tx is
 [`0x506cf0e7…d8d09b`](https://celoscan.io/tx/0x506cf0e7d8812534e7f9ecdf8f4969e5fd8ce25b5ccae287be35dac8f0d8d09b)
 (carries the `celo_c42607f62b5b` attribution tag, verified with `npm run verify-tag`). Real settlements
-(34 paid calls so far, across intel, on-chain and opportunity tasks) are in
-[`docs/PROOF.md`](docs/PROOF.md), generated from the database by `npm run proof`.
+(41 paid calls so far: 32 on Celo mainnet and 9 earlier on Celo Sepolia testnet during the sandbox
+build, each labelled by network) are in [`docs/PROOF.md`](docs/PROOF.md), generated from the database
+by `npm run proof`. Per-provider and per-day demand is in [`docs/DEMAND.md`](docs/DEMAND.md)
+(`npm run demand`).
 
 ## What is not built yet (honest scope)
 

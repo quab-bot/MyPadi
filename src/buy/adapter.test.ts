@@ -4,9 +4,39 @@ import {
   BuyQuoteError,
   parseBuyError,
   classifyError,
+  extractReceiptTxHash,
   type BuyRunner,
   type BuyRunResult,
 } from './adapter.js';
+
+const HASH = '0x' + '1'.repeat(64);
+const NONCE = '0x' + '9'.repeat(64);
+
+describe('extractReceiptTxHash', () => {
+  it('prefers a value under a tx-hash-named key', () => {
+    const json = JSON.stringify([{ nonce: NONCE, settlement: { txHash: HASH } }]);
+    expect(extractReceiptTxHash(json)).toBe(HASH);
+  });
+
+  it('does not mistake an authorization nonce for the tx hash', () => {
+    // Only a nonce-shaped field is present, under a non-hash key: no keyed hash to return.
+    const json = JSON.stringify({ authorization: { nonce: NONCE } });
+    // Falls back to the raw scan, which would return the only 0x..64hex present (the nonce).
+    // Guard: when a hash-named field IS present, it must win over the nonce.
+    const withHash = JSON.stringify({ authorization: { nonce: NONCE }, transactionHash: HASH });
+    expect(extractReceiptTxHash(withHash)).toBe(HASH);
+    expect(extractReceiptTxHash(json)).toBe(NONCE); // documents the fallback explicitly
+  });
+
+  it('falls back to a raw 0x..64hex scan for non-JSON output', () => {
+    expect(extractReceiptTxHash('tx ' + HASH + '\n')).toBe(HASH);
+  });
+
+  it('returns undefined when there is no hash at all', () => {
+    expect(extractReceiptTxHash('no receipts yet')).toBeUndefined();
+    expect(extractReceiptTxHash('')).toBeUndefined();
+  });
+});
 
 /** A runner that returns a scripted result and records the argv it was called with. */
 function scriptedRunner(result: BuyRunResult): { runner: BuyRunner; calls: string[][] } {

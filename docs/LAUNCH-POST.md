@@ -43,7 +43,7 @@ The part nobody else shows: receipts.
 
 Every service call is a real x402 payment from our wallet, settled on Celo. Type /proof in the bot and you get each one with its tx hash.
 
-34 settlements so far.
+41 paid settlements so far (32 on Celo mainnet, plus 9 earlier on Celo Sepolia testnet).
 
 ---
 

@@ -44,23 +44,58 @@ paid for within budget:
 - **Competitor and jobs research (Workflow B):** a company's recent LinkedIn posts plus who they hire.
 
 ## buy services used and why (depth of integration)
-Real paid x402 calls from the MyPadi wallet into services we do not control:
+Real paid x402 calls from the MyPadi wallet into services we do not control.
 
-- **x.posts.search** / **reddit.posts.search** / **youtube.videos.search** ($0.005/call each) — social
+**Exercised with real settlements (see `docs/PROOF.md`, each with its settlement tx hash):**
+
+- **x.posts.search** / **reddit.posts.search** / **youtube.videos.search** ($0.005/call each): social
   signal and discussion.
-- **Instagram** and **TikTok** search (apify bundles) — visual and short-video coverage for Workflow A.
-- **YouTube transcript** (`monid.youtube.apify.starvibe-youtube-video-transcript`, $0.013/video) —
+- **YouTube transcript** (`monid.youtube.apify.starvibe-youtube-video-transcript`, $0.013/video):
   turns the top videos into quotable text.
-- **flights.search** (`/v1/travel/flights/search`, $0.023/call) — live Google Flights itineraries.
-- **chainstack.celo** (`/chainstack/celo`, $0.01/batch) — authoritative Celo JSON-RPC batch reads,
+- **TikTok search** (`monid.tiktok.apify.apidojo-tiktok-scraper`, apify bundle): short-video coverage
+  for Workflow A.
+- **chainstack.celo** (`/chainstack/celo`, $0.01/batch): authoritative Celo JSON-RPC batch reads,
   alongside the free SQD portal for cheap lookups.
-- **LinkedIn** (`linkedin.company.posts` / `linkedin.profile.posts` $0.023, apify `job-search` /
-  `post-search` bundles) — competitor and jobs research synthesised into one brief.
+
+**Wired and callable, not yet exercised with a paid settlement** (built into the tool registry and
+allowlist, but no paid row in `docs/PROOF.md` yet, so we do not claim them as proof):
+
+- **Instagram search** (apify bundle): visual coverage for Workflow A.
+- **flights.search** (`/v1/travel/flights/search`, $0.023/call): Google Flights itineraries.
+- **LinkedIn** (`linkedin.company.posts` / `linkedin.profile.posts`, apify `job-search` /
+  `post-search` bundles): competitor and jobs research.
 
 Depth, not spam: each report chains several different providers, each call is quoted first and paid
 only within budget, every paid call is stored with its settlement tx hash as evidence (users can see
 their own with `/proof`), and Watchtower turns one-off research into an ongoing, compounding use of
 these services. We do not pad the count with repeated cheap calls.
+
+## Demand created for the services we pay
+Build with buy rewards real demand sent to providers, not call volume. Two things make MyPadi's
+demand real and growing, and both are measurable:
+
+- **Fan-out per task.** One plain-language task fans out into several paid calls across *different*
+  providers (a single intel report hits X, Reddit, YouTube, a transcript provider and TikTok). The
+  per-provider breakdown is in `docs/DEMAND.md` (`npm run demand`), generated from real paid rows.
+- **Recurring demand via Watchtower.** A standing watch re-runs its research on a schedule, so each
+  active watch turns one-off research into repeat paid traffic to the same providers over time. The
+  per-day table in `docs/DEMAND.md` is where this shows up.
+
+**Provider-side proof, independently checkable.** Each paid call is a USDC transfer from the agent
+wallet `0xe7C8…ECc3` to the provider's recipient address, settled on Celo. A provider can verify the
+revenue we send them from their own side, by the settlements their address receives; each row in
+`docs/PROOF.md` links to that on-chain transfer. (Verified example: settlement `0x4ef72162…` is a
+0.005 USDC transfer from the agent wallet to the provider recipient `0x20faAca5…` on Celo mainnet.)
+
+## Use case: a named task (before / after)
+To make the value concrete rather than abstract, we record one real end-to-end task here. Filled from
+a live run, not invented:
+
+- User / context: {{user_context}}
+- Task asked: {{task_text}}
+- Providers paid and cost: {{providers_and_cost}} (see that run in `docs/PROOF.md`)
+- Before MyPadi: {{manual_cost_time}} (accounts/keys per provider, manual collation)
+- After MyPadi: one Telegram message, {{mypadi_cost}} total, sourced answer in {{duration}}
 
 ## Budget controls
 Global ~$5 ($3.50 real tasks, $0.50 failure reserve, $1.00 final demo). Enforced by the `buy` daily
@@ -86,9 +121,13 @@ endpoint, price, settlement tx hash and the task each call served.
 
 ## Users and usage
 Live figures come from the database on the VPS; regenerate with `npm run proof` (see `docs/PROOF.md`).
-Early mainnet usage already shows real settlements across several workflows (see `/proof` in the bot
-and the PROOF table): intel (X / Reddit / YouTube + transcripts), on-chain (Chainstack batches),
-and more, each a real USDC settlement on Celo mainnet.
+The proof log holds 41 paid x402 settlements so far: **32 on Celo mainnet** ($0.2366) and **9 earlier
+on Celo Sepolia testnet** ($0.069) during the sandbox build, each labelled in the Network column.
+They span several workflows: intel (X / Reddit / YouTube + transcripts, TikTok) and on-chain
+(Chainstack batches); the per-provider and per-day breakdown is in `docs/DEMAND.md`. Every mainnet row
+is a real USDC settlement from the agent wallet, and can be checked independently: for example
+settlement `0x4ef72162…` carries a USDC transfer of 0.005 from the agent wallet `0xe7C8…ECc3` on Celo
+mainnet, matching its row.
 
 ---
 

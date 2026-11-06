@@ -18,6 +18,7 @@
     "verify-tag": "tsx scripts/verify-tag.ts",
     "preflight": "tsx scripts/preflight.ts",
     "proof": "tsx scripts/proof.ts",
+    "demand": "tsx scripts/demand.ts",
     "gen-registration": "tsx scripts/gen-registration.ts",
     "demo-sandbox": "tsx scripts/demo-sandbox.ts",
     "db-reset-demo": "tsx scripts/db-reset-demo.ts",
