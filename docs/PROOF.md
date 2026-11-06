@@ -5,7 +5,7 @@ payment made for the MyPadi project wallet. The Network column says whether a ro
 on Celo mainnet (`celo`) or on Celo Sepolia testnet (`celo-sepolia`, from the sandbox
 build); see the per-network totals below. Do not hand-edit.
 
-Generated: 2026-11-06T08:58:33.443Z
+Generated: 2026-11-06T10:12:31.680Z
 
 | Date (UTC) | Service | Endpoint (host) | Price | Token | Network | Settlement tx | Task |
 |---|---|---|---|---|---|---|---|
@@ -50,18 +50,31 @@ Generated: 2026-11-06T08:58:33.443Z
 | 2026-11-05 16:02 | x.posts.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0x2c11250550acc6d16439a6dafae1c025de1332eb2479e6d6b4da4b8647f57af7` | new base grants |
 | 2026-11-05 16:02 | reddit.posts.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0xe38d12839698b93f28f905ebb3a5397295613bee0c88206c55092264d25c54f0` | new base grants |
 | 2026-11-05 16:03 | youtube.videos.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0x5b126f8f5182f8e79d97185f84540df896f87ac17ceee79a6d9150085f2da292` | new base grants |
+| 2026-11-06 09:20 | x.posts.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0x138b584a3c7a5ec9384a525e03a183e6f4c7cbff34e35a2155ae63add707ab57` | New base grant |
+| 2026-11-06 09:20 | reddit.posts.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0x7fa40aab8d80844de028ce3b0f3007b19d95b9b004996a0a4b37a63163668a0a` | New base grant |
+| 2026-11-06 09:21 | youtube.videos.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0x02b98eb7ae5e80ef3de9433952ea83e028d422d62b082716649df7893e3cd615` | New base grant |
+| 2026-11-06 09:21 | x.posts.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0xd1cac24a386cbac6054863586f795d13b05566a6f6c33edacc7d8acd14dad212` | New base grant |
+| 2026-11-06 09:40 | x.posts.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0xa2a0c5b38e2da22ee42f91bfcef42fad16e2e4aac4fb721d4aecfdd0200ddacf` | New base grant |
+| 2026-11-06 09:40 | reddit.posts.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0x33ec2e500720d5d52b7bad1ddf8284bef8aa794d029d8962363dfd0570b53c73` | New base grant |
+| 2026-11-06 09:41 | youtube.videos.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0x8fb3511c32d34dd85705d2b4d818c094a446743e061a0b8cec61f30dc96d15d6` | New base grant |
+| 2026-11-06 09:45 | x.posts.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0x0692ecfb009bccf855267925eceee8c9dafb256af691aaa7cce788459c8fb731` | New base grant |
+| 2026-11-06 09:45 | reddit.posts.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0xb26ba92a576638e33517799bd30981075ec68bdc087caf00a63dcfa09feb08ef` | New base grant |
+| 2026-11-06 09:46 | youtube.videos.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0xa6c91524e609dbace1c0309ceb453e3cee218a12f17f4de22505c3217613e7f0` | New base grant |
+| 2026-11-06 10:03 | x.posts.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0x85dd7b1a35e25e4ff69cda32bda3424d44587e015e9cfc4d2313baf8ccfeea23` | new base grants |
+| 2026-11-06 10:03 | reddit.posts.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0xee65ee6d0484b8df1038bd08b89edf91fd486f163c64577e867d95750159e4f0` | new base grants |
+| 2026-11-06 10:04 | youtube.videos.search | gateway.usebuy.ai | $0.005 | USDC | celo | `0xc9ba89eb9472967a1e7f4ecf5d357e0279b42ac86813d01b0853f8fdbda6afd5` | new base grants |
 
 ## Totals by status
 
 | Status | Count | Total paid |
 |---|---|---|
 | free | 4 | $0 |
-| paid | 41 | $0.3056 |
+| paid | 54 | $0.3706 |
 | unresolved | 11 | $0 |
 
 ## Paid settlements by network
 
 | Network | Paid calls | Total paid |
 |---|---|---|
-| celo | 32 | $0.2366 |
+| celo | 45 | $0.3016 |
 | celo-sepolia | 9 | $0.069 |

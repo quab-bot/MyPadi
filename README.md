@@ -122,7 +122,7 @@ Registered on the Celo ERC-8004 Identity Registry (`0x8004A169FB4a3325136EB29fA0
 registration tx is
 [`0x506cf0e7…d8d09b`](https://celoscan.io/tx/0x506cf0e7d8812534e7f9ecdf8f4969e5fd8ce25b5ccae287be35dac8f0d8d09b)
 (carries the `celo_c42607f62b5b` attribution tag, verified with `npm run verify-tag`). Real settlements
-(41 paid calls so far: 32 on Celo mainnet and 9 earlier on Celo Sepolia testnet during the sandbox
+(54 paid calls so far: 45 on Celo mainnet and 9 earlier on Celo Sepolia testnet during the sandbox
 build, each labelled by network) are in [`docs/PROOF.md`](docs/PROOF.md), generated from the database
 by `npm run proof`. Per-provider and per-day demand is in [`docs/DEMAND.md`](docs/DEMAND.md)
 (`npm run demand`).

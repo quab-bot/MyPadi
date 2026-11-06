@@ -129,7 +129,7 @@ endpoint, price, settlement tx hash and the task each call served.
 
 ## Users and usage
 Live figures come from the database on the VPS; regenerate with `npm run proof` (see `docs/PROOF.md`).
-The proof log holds 41 paid x402 settlements so far: **32 on Celo mainnet** ($0.2366) and **9 earlier
+The proof log holds 54 paid x402 settlements so far: **45 on Celo mainnet** ($0.3016) and **9 earlier
 on Celo Sepolia testnet** ($0.069) during the sandbox build, each labelled in the Network column.
 They span several workflows: intel (X / Reddit / YouTube + transcripts, TikTok) and on-chain
 (Chainstack batches); the per-provider and per-day breakdown is in `docs/DEMAND.md`. Every mainnet row
