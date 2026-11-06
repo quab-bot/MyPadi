@@ -186,8 +186,12 @@ export class BuyAdapter {
 
 /** A 32-byte hex value (tx hash, block hash, or an EIP-3009 nonce all share this shape). */
 const HEX32 = /^0x[0-9a-fA-F]{64}$/;
-/** Key names that denote a settlement tx hash (never a nonce/authorization). */
-const TX_HASH_KEY = /(tx|transaction|settlement).*hash|hash.*(tx|transaction)|txhash|txid/i;
+/**
+ * Key names that denote a settlement tx hash (never a nonce/authorization). Matches the real buy
+ * receipt field `transaction`, plus the usual `txHash`/`transactionHash`/`txid`/bare `tx`/`hash`.
+ * Deliberately does NOT match `blockHash` (no tx/transaction, and not exactly `hash`).
+ */
+const TX_HASH_KEY = /transaction|txhash|txid|^tx$|settlementtx|^hash$/i;
 
 /**
  * Pull the settlement tx hash out of a `buy receipts` payload. Prefers a value under a hash-named

@@ -40,7 +40,14 @@ export function runWorker(opts: {
       }
       try {
         const report = await coordinator.runTask(task);
-        await client.sendMessage(task.userId, formatReportForTelegram(report), 'HTML');
+        const text = formatReportForTelegram(report);
+        // Never send an empty message: Telegram rejects it ("message text is empty") and the task
+        // would fail after we already did (and paid for) the work. Fall back to a plain note.
+        await client.sendMessage(
+          task.userId,
+          text.trim() || 'I finished working on that but could not put the answer into words. Please try again, or rephrase it.',
+          'HTML',
+        );
       } catch (e) {
         opts.onError?.(e);
         await repo.setTaskStatus(task.id, 'failed').catch(() => {});

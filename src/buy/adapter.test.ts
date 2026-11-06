@@ -18,6 +18,16 @@ describe('extractReceiptTxHash', () => {
     expect(extractReceiptTxHash(json)).toBe(HASH);
   });
 
+  it('reads the real buy receipt shape (hash under a bare "transaction" key)', () => {
+    const json = JSON.stringify({ capability: 'x.posts.search', transaction: HASH, payment: { atomic: '5000' } });
+    expect(extractReceiptTxHash(json)).toBe(HASH);
+  });
+
+  it('does not pick up a blockHash field', () => {
+    const json = JSON.stringify({ blockHash: NONCE, transaction: HASH });
+    expect(extractReceiptTxHash(json)).toBe(HASH);
+  });
+
   it('does not mistake an authorization nonce for the tx hash', () => {
     // Only a nonce-shaped field is present, under a non-hash key: no keyed hash to return.
     const json = JSON.stringify({ authorization: { nonce: NONCE } });

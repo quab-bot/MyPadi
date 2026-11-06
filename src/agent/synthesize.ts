@@ -55,6 +55,26 @@ export interface SynthesisInput {
   maxEvidenceChars?: number;
 }
 
+/**
+ * Deterministic brief built straight from the evidence, used when the LLM returns empty content or
+ * errors. The paid data is already in hand, so the user still gets a useful, sourced answer instead
+ * of an empty message. Never empty when `evidence` is non-empty.
+ */
+export function fallbackReport(prompt: string, evidence: Evidence[], limit = 8): string {
+  const items = evidence.slice(0, limit);
+  const lines: string[] = [`Here is what I found for: ${prompt}`, ''];
+  items.forEach((e, i) => {
+    const text = e.excerpt.replace(/\s+/g, ' ').trim().slice(0, 240);
+    lines.push(`- [${i + 1}] ${e.source}${e.title ? `: ${e.title}` : ''}${text ? `: ${text}` : ''}`);
+  });
+  lines.push('', '**Sources**');
+  items.forEach((e, i) => {
+    const label = `${e.source}${e.title ? ` ${e.title}` : ''}`;
+    lines.push(e.url ? `[${i + 1}] ${label} - ${e.url}` : `[${i + 1}] ${label}`);
+  });
+  return lines.join('\n');
+}
+
 export function buildEvidenceBlock(evidence: Evidence[], maxChars: number): { block: string; used: number } {
   const lines: string[] = [];
   let total = 0;
@@ -85,14 +105,24 @@ export class Synthesizer {
     const { block } = buildEvidenceBlock(input.evidence, maxChars);
     const user = `User request: ${input.prompt}\n\nEvidence:\n${block}`;
     const system = input.guidance ? `${SYNTH_SYSTEM}\n\nFor THIS task specifically:\n${input.guidance}` : SYNTH_SYSTEM;
-    const content = await this.llm.complete(
-      [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      { temperature: 0.4, maxTokens: 1200 },
-    );
-    return content.trim();
+    let content = '';
+    try {
+      content = (
+        await this.llm.complete(
+          [
+            { role: 'system', content: system },
+            { role: 'user', content: user },
+          ],
+          { temperature: 0.4, maxTokens: 1200 },
+        )
+      ).trim();
+    } catch {
+      content = '';
+    }
+    // The model occasionally returns empty content (e.g. a reasoning model that spends its token
+    // budget before emitting an answer) or the call fails. We already paid for and hold the
+    // evidence, so fall back to a deterministic sourced brief rather than returning an empty reply.
+    return content || fallbackReport(input.prompt, input.evidence);
   }
 
   /** Small-talk / meta reply in MyPadi's voice. No evidence, no paid calls. */
