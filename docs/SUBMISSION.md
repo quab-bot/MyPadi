@@ -87,19 +87,27 @@ revenue we send them from their own side, by the settlements their address recei
 `docs/PROOF.md` links to that on-chain transfer. (Verified example: settlement `0x4ef72162…` is a
 0.005 USDC transfer from the agent wallet to the provider recipient `0x20faAca5…` on Celo mainnet.)
 
-## Use case: a named task (before / after)
-To make the value concrete rather than abstract, we record one real end-to-end task here. Filled from
-a live run, not invented:
+## Use case: a real task (before / after)
+One real end-to-end run from the live bot (logged in the database, settlements in `docs/PROOF.md`,
+2026-11-04). The "after" figures are measured; the "before" is a labelled estimate.
 
-- User / context: {{user_context}}
-- Task asked: {{task_text}}
-- Providers paid and cost: {{providers_and_cost}} (see that run in `docs/PROOF.md`)
-- Before MyPadi: {{manual_cost_time}} (accounts/keys per provider, manual collation)
-- After MyPadi: one Telegram message, {{mypadi_cost}} total, sourced answer in {{duration}}
+- User / context: a Telegram user doing a market-sentiment check, with no data-provider account and
+  no wallet of their own.
+- Task asked: "What are people saying about MiniPay and mobile money in Africa across social media?"
+- What MyPadi paid for (one run, 5 providers, 6 paid calls, $0.0446 total, each with a settlement tx
+  hash on Celo mainnet):
+  - X search $0.005, Reddit search $0.005, YouTube search $0.005, TikTok search $0.0036, and two
+    YouTube transcripts $0.013 each.
+- Before MyPadi (estimate): to do this by hand you would open and pay for separate access to X,
+  Reddit, YouTube and TikTok data plus a transcript tool, each with its own signup, key and usually a
+  monthly minimum, then query each and collate by hand. Realistically tens of dollars a month in
+  minimums and roughly 20 to 30 minutes per question.
+- After MyPadi (measured): one Telegram message, $0.0446 for that run, a sourced answer in 103
+  seconds, no accounts and no wallet for the user.
 
 ## Budget controls
 Global ~$5 ($3.50 real tasks, $0.50 failure reserve, $1.00 final demo). Enforced by the `buy` daily
-cap **and** our own micro-USD ledger (reserve-then-commit, never a guessed price — it reserves the
+cap **and** our own micro-USD ledger (reserve-then-commit, never a guessed price, it reserves the
 402 `maxAmountRequired`). Never-retry outcomes (504 / settle_uncertain / provision_failed) keep the
 budget held and are resolved with `buy receipts --resolve`, never silently retried.
 

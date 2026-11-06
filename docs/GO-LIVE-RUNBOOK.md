@@ -98,3 +98,36 @@ If the Loops entry shows a different tag, the Loops entry wins: tell the develop
 5. Confirm on the Loops entry that every check is green and the submission shows as submitted.
 
 Deadline: **Mon 9 Nov 2026, 09:00 GMT**. Target: submit by Sun 8 Nov.
+
+---
+
+## Troubleshooting: "system signer backend for account mypadi: key not found"
+
+**Symptom.** New `service_calls` rows land with `status = unresolved` and an excerpt of
+`system signer backend for account "mypadi": key not found`; `/proof` stops gaining mainnet rows and
+the bot's paid steps fail. The wallet is fine; the running process just cannot reach the key.
+
+**Cause.** Mainnet signing reads the wallet key from the OS keychain (gnome-keyring, `system`
+backend), which must be unlocked inside the app process's D-Bus session (see
+`deploy/start-with-keyring.sh`). A reboot, or a PM2 restart that did not go through that script, leaves
+the process without an unlocked keyring, so the `buy` subprocess finds no key. No money moves on these
+calls (signing fails before settlement); the budget is only held, not spent.
+
+**Fix (run on the VPS, in the app directory; `pm2 info mypadi` shows its cwd).**
+1. Diagnose whether the key is reachable at all:
+   `deploy/with-keyring.sh buy whoami`
+   - Prints the wallet address: the keychain is fine, the app just needs a clean restart (step 2).
+   - Still "key not found": the keychain entry is gone, re-import it (step 3).
+2. Restart through the keyring launcher and watch it come up:
+   `pm2 restart mypadi --update-env && pm2 logs mypadi --lines 40`
+3. Only if step 1 still failed, re-import the key (it stays in env, never on the command line):
+   `deploy/with-keyring.sh bash -lc 'BUY_IMPORT_KEY="$(grep ^AGENT_PRIVATE_KEY= .env | cut -d= -f2-)" buy setup --import --name mypadi --network mainnet'`
+   then repeat step 2.
+4. Confirm signing works: send the bot a quick task and check a new `paid` row appears
+   (`/proof`, or query `service_calls`).
+5. Settle the held rows so the ledger is clean:
+   `deploy/with-keyring.sh buy receipts --resolve`
+6. Regenerate the evidence docs from the database: `npm run proof` and `npm run demand`.
+
+Prevention: ensure PM2 resurrects through the launcher after reboot (`pm2 save` once, with
+`pm2 startup` configured), so restarts always re-enter an unlocked-keyring session.
